@@ -1,0 +1,24 @@
+[Unit]
+Description=Wall Planner backend (Express + SQLite)
+Documentation=file://@APP_DIR@/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@RUN_USER@
+WorkingDirectory=@APP_DIR@/server
+Environment=NODE_ENV=production
+# .env is loaded by the app itself from the repo root.
+ExecStart=/usr/bin/node @APP_DIR@/server/src/index.js
+Restart=always
+RestartSec=3
+# Hardening (relaxed enough for SQLite writes + child screen commands).
+NoNewPrivileges=false
+ProtectSystem=full
+ReadWritePaths=@APP_DIR@/database @APP_DIR@/backups @APP_DIR@/config @APP_DIR@/logs
+StandardOutput=append:@APP_DIR@/logs/backend.log
+StandardError=append:@APP_DIR@/logs/backend.log
+
+[Install]
+WantedBy=multi-user.target

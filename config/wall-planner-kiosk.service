@@ -1,0 +1,22 @@
+[Unit]
+Description=Wall Planner Chromium kiosk
+After=wall-planner.service graphical.target
+Wants=wall-planner.service
+# Wait for the graphical (Wayland/labwc) session to be up.
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+User=@RUN_USER@
+# The kiosk needs the user's graphical session bus + Wayland display.
+# On Pi OS Bookworm (labwc/Wayland) the compositor exports WAYLAND_DISPLAY.
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+# Wait until the backend answers before opening Chromium.
+ExecStartPre=/bin/bash -c 'until curl -sf http://localhost:4000/api/health >/dev/null; do sleep 1; done'
+ExecStart=@APP_DIR@/scripts/kiosk.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

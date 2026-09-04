@@ -1,0 +1,25 @@
+{
+  "name": "wall-planner-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Express + SQLite backend for the Wall Planner kiosk",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node src/db/seed.js",
+    "backup": "node src/lib/backupCli.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0",
+    "unzipper": "^0.12.3",
+    "zod": "^3.24.1"
+  }
+}

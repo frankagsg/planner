@@ -1,0 +1,25 @@
+{
+  "name": "wall-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Touchscreen wall planner kiosk for Raspberry Pi 5 (React + Express + SQLite)",
+  "type": "module",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "migrate": "npm --prefix server run migrate",
+    "seed": "npm --prefix server run seed",
+    "start": "npm --prefix server run start",
+    "verify": "node scripts/verify.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

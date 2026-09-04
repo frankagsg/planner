@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================================================================
+   Design tokens. Light/dark via .dark on <html>; accent via data-accent.
+   Warm, modern, softly feminine — not childish. Large touch targets.
+   =========================================================================== */
+@layer base {
+  :root {
+    /* Light theme (warm off-white) */
+    --surface: 250 247 245;         /* page background */
+    --surface-card: 255 255 255;    /* cards */
+    --surface-raised: 255 252 250;  /* raised panels */
+    --content: 55 48 46;            /* primary text */
+    --content-soft: 108 98 95;      /* secondary text */
+    --content-faint: 158 148 145;   /* tertiary text */
+    --line: 235 228 224;            /* borders */
+
+    /* Default accent: blush */
+    --accent: 227 130 168;
+    --accent-soft: 250 232 240;
+    --accent-ink: 140 54 92;
+  }
+
+  html.dark {
+    --surface: 26 24 28;
+    --surface-card: 38 35 42;
+    --surface-raised: 46 42 50;
+    --content: 240 235 240;
+    --content-soft: 186 178 190;
+    --content-faint: 130 122 134;
+    --line: 58 52 62;
+
+    --accent-soft: 60 40 52;
+    --accent-ink: 245 205 224;
+  }
+
+  /* Accent palettes (data-accent on <html>) */
+  html[data-accent='blush']    { --accent: 227 130 168; --accent-soft: 250 232 240; --accent-ink: 140 54 92; }
+  html[data-accent='lavender'] { --accent: 149 128 224; --accent-soft: 238 233 252; --accent-ink: 79 60 150; }
+  html[data-accent='sage']     { --accent: 111 178 145; --accent-soft: 228 244 235; --accent-ink: 44 104 76; }
+  html[data-accent='sky']      { --accent: 108 154 232; --accent-soft: 229 238 252; --accent-ink: 46 84 156; }
+  html[data-accent='amber']    { --accent: 226 160 78;  --accent-soft: 251 240 224; --accent-ink: 150 92 24; }
+
+  html.dark[data-accent='blush']    { --accent-soft: 62 40 52; --accent-ink: 245 200 222; }
+  html.dark[data-accent='lavender'] { --accent-soft: 46 40 66; --accent-ink: 214 202 250; }
+  html.dark[data-accent='sage']     { --accent-soft: 34 52 44; --accent-ink: 196 232 212; }
+  html.dark[data-accent='sky']      { --accent-soft: 34 46 66; --accent-ink: 198 218 250; }
+  html.dark[data-accent='amber']    { --accent-soft: 58 46 32; --accent-ink: 248 220 184; }
+
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-surface text-content font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  /* Kiosk: no text selection / callouts on touch. */
+  .kiosk-nosel {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-card rounded-2xl shadow-soft border border-line/60;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3
+           text-lg font-semibold transition active:scale-[0.97]
+           min-h-[3.25rem] select-none;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white shadow-soft hover:brightness-105;
+  }
+  .btn-ghost {
+    @apply btn bg-surface-raised text-content border border-line hover:bg-accent-soft;
+  }
+  .btn-soft {
+    @apply btn bg-accent-soft text-accent-ink hover:brightness-[0.98];
+  }
+  .btn-danger {
+    @apply btn bg-rose-500/90 text-white hover:bg-rose-500;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface-raised px-4 py-3
+           text-lg text-content placeholder:text-content-faint
+           focus:outline-none focus:ring-4 focus:ring-accent/25 focus:border-accent;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold;
+  }
+  .nav-item {
+    @apply flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-3
+           text-content-soft transition min-w-[5rem] select-none;
+  }
+  .nav-item-active {
+    @apply bg-accent-soft text-accent-ink shadow-soft;
+  }
+}
+
+/* Hide scrollbars but keep scrolling (kiosk aesthetics). */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* FullCalendar theming overrides live in calendar.css */
