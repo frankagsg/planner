@@ -7,6 +7,11 @@ import {
   Heart,
   ChevronRight,
   Clock,
+  Sparkles,
+  UtensilsCrossed,
+  ShoppingCart,
+  Star,
+  Images,
 } from 'lucide-react';
 import { useResource } from '../hooks/useResource';
 import { useSettings } from '../context/SettingsContext';
@@ -15,7 +20,10 @@ import { ClockWidget } from '../components/widgets/ClockWidget';
 import { WeatherWidget } from '../components/widgets/WeatherWidget';
 import { CountdownWidget } from '../components/widgets/CountdownWidget';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { PhotoMode } from '../components/PhotoMode';
+import { MemberAvatar } from '../components/MemberBadge';
 import { relative } from '../lib/dates';
+import { useState } from 'react';
 
 function SectionCard({
   title,
@@ -46,6 +54,9 @@ export default function HomePage() {
   const { data } = useResource<DashboardData>('/dashboard', []);
   const personalEnabled = get<boolean>('personal.enabled', true);
   const household = get<string>('general.householdName', 'Our Home');
+  const [photoMode, setPhotoMode] = useState(false);
+  const members = data?.familyMembers ?? [];
+  const memberById = (id?: number | null) => members.find((m) => m.id === id) || null;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -57,11 +68,31 @@ export default function HomePage() {
   return (
     <div className="p-6 max-w-[1600px] mx-auto">
       <header className="mb-6">
-        <h1 className="text-3xl font-display font-bold text-content">
-          {greeting} 💛
-        </h1>
-        <p className="text-content-soft text-lg">{household}</p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-content">
+              {greeting} 💛
+            </h1>
+            <p className="text-content-soft text-lg">{household}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {members.length > 0 && (
+              <div className="flex -space-x-2">
+                {members.slice(0, 6).map((m) => (
+                  <div key={m.id} className="ring-2 ring-surface rounded-full">
+                    <MemberAvatar member={m} size={44} />
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="btn-ghost !py-2.5" onClick={() => setPhotoMode(true)}>
+              <Images size={20} /> Photo Mode
+            </button>
+          </div>
+        </div>
       </header>
+
+      {photoMode && <PhotoMode onExit={() => setPhotoMode(false)} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left column: clock + weather */}
@@ -103,23 +134,31 @@ export default function HomePage() {
           <SectionCard title="Tasks" icon={CheckSquare} to="/tasks">
             {data?.tasksToday?.length ? (
               <ul className="space-y-2">
-                {data.tasksToday.slice(0, 6).map((t) => (
-                  <li key={t.id} className="flex items-center gap-3">
-                    <span
-                      className={`w-3 h-3 rounded-full shrink-0 ${
-                        t.priority === 'high' ? 'bg-rose-400' : 'bg-accent'
-                      }`}
-                    />
-                    <span className="font-semibold text-content flex-1 line-clamp-1">
-                      {t.title}
-                    </span>
-                    {t.due && (
-                      <span className="text-sm text-content-faint flex items-center gap-1">
-                        <Clock size={13} /> {format(new Date(t.due), 'h:mm a')}
+                {data.tasksToday.slice(0, 6).map((t) => {
+                  const m = memberById(t.member_id);
+                  return (
+                    <li key={t.id} className="flex items-center gap-3">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{
+                          backgroundColor: m
+                            ? m.color
+                            : t.priority === 'high'
+                            ? 'rgb(244 114 114)'
+                            : 'rgb(var(--accent))',
+                        }}
+                      />
+                      <span className="font-semibold text-content flex-1 line-clamp-1">
+                        {t.title}
                       </span>
-                    )}
-                  </li>
-                ))}
+                      {t.due && (
+                        <span className="text-sm text-content-faint flex items-center gap-1">
+                          <Clock size={13} /> {format(new Date(t.due), 'h:mm a')}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-content-faint">No tasks due today. 🎉</p>
@@ -130,10 +169,79 @@ export default function HomePage() {
               </p>
             )}
           </SectionCard>
+
+          <SectionCard title="Chores" icon={Sparkles} to="/chores">
+            {data?.choresToday?.length ? (
+              <ul className="space-y-2">
+                {data.choresToday.slice(0, 6).map((c) => {
+                  const m = memberById(c.member_id);
+                  return (
+                    <li key={c.id} className="flex items-center gap-3">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: m ? m.color : 'rgb(var(--content-faint))' }}
+                      />
+                      <span
+                        className={`font-semibold flex-1 line-clamp-1 ${
+                          c.done ? 'text-content-faint line-through' : 'text-content'
+                        }`}
+                      >
+                        {c.title}
+                      </span>
+                      <span className="text-sm text-content-faint flex items-center gap-1">
+                        <Star size={13} /> {c.points}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-content-faint">No chores today. 🌱</p>
+            )}
+            {data && data.choresToday.length > 0 && (
+              <p className="text-sm text-content-faint mt-3">
+                {data.choresRemaining} left today
+              </p>
+            )}
+          </SectionCard>
         </div>
 
-        {/* Right column: school + personal + notes */}
+        {/* Right column: meals + lists + school + personal + notes */}
         <div className="space-y-5">
+          <SectionCard title="Today's meals" icon={UtensilsCrossed} to="/meals">
+            {data?.mealsToday?.length ? (
+              <ul className="space-y-2">
+                {data.mealsToday.map((mn) => (
+                  <li key={mn.id} className="flex items-center gap-3">
+                    <span className="chip bg-accent-soft text-accent-ink capitalize w-24 justify-center">
+                      {mn.slot}
+                    </span>
+                    <span className="font-semibold text-content flex-1 line-clamp-1">
+                      {mn.title}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-content-faint">No meals planned today.</p>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Groceries" icon={ShoppingCart} to="/lists">
+            {data ? (
+              <p className="text-lg text-content">
+                <span className="font-bold text-2xl text-accent-ink">{data.groceryOpen}</span>{' '}
+                item{data.groceryOpen === 1 ? '' : 's'} to buy
+                <span className="text-content-faint text-base">
+                  {' '}
+                  · {data.groceryLists} list{data.groceryLists === 1 ? '' : 's'}
+                </span>
+              </p>
+            ) : (
+              <p className="text-content-faint">No lists yet.</p>
+            )}
+          </SectionCard>
+
           <SectionCard title="School" icon={GraduationCap} to="/school">
             {data?.schoolSummary ? (
               <div className="space-y-2">

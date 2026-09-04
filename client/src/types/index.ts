@@ -6,6 +6,17 @@ export interface Category {
   kind: 'general' | 'school' | 'personal';
 }
 
+export interface FamilyMember {
+  id: number;
+  name: string;
+  color: string;
+  emoji?: string | null;
+  birthday?: string | null;
+  role: 'adult' | 'child';
+  sort_order: number;
+  active: number;
+}
+
 export interface EventItem {
   id: number;
   title: string;
@@ -15,8 +26,9 @@ export interface EventItem {
   end: string;
   all_day: number;
   category_id?: number | null;
+  member_id?: number | null;
   color?: string | null;
-  source: 'local' | 'google';
+  source: 'local' | 'google' | 'ics';
   google_id?: string | null;
   google_cal_id?: string | null;
   rrule?: string | null;
@@ -29,9 +41,108 @@ export interface Task {
   due?: string | null;
   priority: 'low' | 'normal' | 'high';
   category_id?: number | null;
+  member_id?: number | null;
   completed: number;
   completed_at?: string | null;
   sort_order: number;
+}
+
+export type ChoreRecurrence = 'none' | 'daily' | 'weekly' | 'specific-days';
+
+export interface Chore {
+  id: number;
+  title: string;
+  member_id?: number | null;
+  points: number;
+  recurrence: ChoreRecurrence;
+  days_of_week: number;
+  active: number;
+  notes?: string | null;
+  sort_order: number;
+}
+
+export interface ChoreCompletion {
+  id: number;
+  chore_id: number;
+  member_id?: number | null;
+  completed_at: string;
+  completed_on: string;
+  points_awarded: number;
+}
+
+export interface ChoreToday extends Chore {
+  done: boolean;
+  completion: ChoreCompletion | null;
+}
+
+export interface ChoreWeekDay {
+  date: string;
+  applies: boolean;
+  done: boolean;
+}
+export interface ChoreWeekRow extends Chore {
+  days: ChoreWeekDay[];
+}
+export interface ChoreWeek {
+  dates: string[];
+  chores: ChoreWeekRow[];
+}
+
+export interface LeaderboardEntry {
+  member: FamilyMember;
+  weekPoints: number;
+  weekCount: number;
+  allTimePoints: number;
+  allTimeCount: number;
+}
+export interface Leaderboard {
+  weekDates: string[];
+  board: LeaderboardEntry[];
+  sharedWeekPoints: number;
+}
+
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export interface Meal {
+  id: number;
+  date: string;
+  slot: MealSlot;
+  title: string;
+  notes?: string | null;
+  recipe_url?: string | null;
+  member_id?: number | null;
+}
+export interface MealWeek {
+  dates: string[];
+  slots: MealSlot[];
+  meals: Meal[];
+}
+
+export interface ShoppingList {
+  id: number;
+  name: string;
+  sort_order: number;
+  total?: number;
+  checked?: number;
+}
+export interface ShoppingItem {
+  id: number;
+  list_id: number;
+  text: string;
+  qty?: string | null;
+  checked: number;
+  member_id?: number | null;
+  sort_order: number;
+}
+
+export interface CalendarSubscription {
+  id: number;
+  name: string;
+  url: string;
+  color: string;
+  member_id?: number | null;
+  enabled: number;
+  last_synced?: string | null;
+  last_error?: string | null;
 }
 
 export interface Note {
@@ -181,6 +292,12 @@ export interface DashboardData {
   pinnedNotes: Note[];
   countdowns: Countdown[];
   personal: PersonalConfig;
+  familyMembers: FamilyMember[];
+  choresToday: ChoreToday[];
+  choresRemaining: number;
+  mealsToday: Meal[];
+  groceryOpen: number;
+  groceryLists: number;
   generatedAt: string;
 }
 

@@ -14,6 +14,7 @@ const EventSchema = z.object({
   end: isoDate,
   all_day: z.coerce.boolean().default(false),
   category_id: z.coerce.number().int().positive().optional().nullable(),
+  member_id: z.coerce.number().int().positive().optional().nullable(),
   color: hexColor.optional().nullable(),
   rrule: z.string().max(500).optional().nullable(),
 });
@@ -27,6 +28,7 @@ function toRow(data) {
     end: data.end,
     all_day: data.all_day ? 1 : 0,
     category_id: data.category_id ?? null,
+    member_id: data.member_id ?? null,
     color: data.color ?? null,
     rrule: data.rrule ?? null,
   };
@@ -51,6 +53,10 @@ router.get(
     if (source) {
       clauses.push('source = @source');
       params.source = String(source);
+    }
+    if (req.query.member_id) {
+      clauses.push('member_id = @member_id');
+      params.member_id = Number(req.query.member_id);
     }
     if (clauses.length) sql += ' WHERE ' + clauses.join(' AND ');
     sql += ' ORDER BY start';
@@ -77,8 +83,8 @@ router.post(
     }
     const info = db
       .prepare(
-        `INSERT INTO events (title, description, location, start, "end", all_day, category_id, color, rrule)
-         VALUES (@title,@description,@location,@start,@end,@all_day,@category_id,@color,@rrule)`
+        `INSERT INTO events (title, description, location, start, "end", all_day, category_id, member_id, color, rrule)
+         VALUES (@title,@description,@location,@start,@end,@all_day,@category_id,@member_id,@color,@rrule)`
       )
       .run(toRow(data));
     res.status(201).json(db.prepare('SELECT * FROM events WHERE id = ?').get(info.lastInsertRowid));
@@ -100,7 +106,7 @@ router.put(
     db.prepare(
       `UPDATE events SET title=@title, description=@description, location=@location,
        start=@start, "end"=@end, all_day=@all_day, category_id=@category_id,
-       color=@color, rrule=@rrule, updated_at=datetime('now') WHERE id=@id`
+       member_id=@member_id, color=@color, rrule=@rrule, updated_at=datetime('now') WHERE id=@id`
     ).run({ ...merged, id });
     res.json(db.prepare('SELECT * FROM events WHERE id = ?').get(id));
   })

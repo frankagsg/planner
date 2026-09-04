@@ -3,7 +3,9 @@ import { createApp } from './app.js';
 import { runMigrations } from './db/migrate.js';
 import { startBackupScheduler } from './services/backup.js';
 import { isConnected, syncEvents } from './services/google.js';
+import { syncAllSubscriptions } from './services/subscriptions.js';
 import { getSetting } from './lib/settings.js';
+import db from './db/index.js';
 
 // 1) Ensure schema is current before serving.
 runMigrations();
@@ -29,6 +31,28 @@ if (isConnected()) {
   if (t.unref) t.unref();
   // Kick one sync shortly after boot.
   setTimeout(() => syncEvents().catch(() => {}), 3000);
+}
+
+// Periodic ICS subscription sync (best-effort, non-fatal). Reuses the same
+// cadence knob as Google. Only runs the timer when at least one subscription
+// exists so idle installs stay quiet.
+function hasSubscriptions() {
+  try {
+    return db.prepare('SELECT COUNT(*) n FROM calendar_subscriptions WHERE enabled=1').get().n > 0;
+  } catch {
+    return false;
+  }
+}
+if (hasSubscriptions()) {
+  const minutes = Number(getSetting('google.autoSyncMinutes')) || 15;
+  const ms = Math.max(5, minutes) * 60 * 1000;
+  const t = setInterval(() => {
+    syncAllSubscriptions().catch((e) =>
+      console.error('[ics] periodic sync failed', e.message)
+    );
+  }, ms);
+  if (t.unref) t.unref();
+  setTimeout(() => syncAllSubscriptions().catch(() => {}), 4000);
 }
 
 // 4) Graceful shutdown.

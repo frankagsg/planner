@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db/index.js';
 import { asyncHandler } from '../middleware/errors.js';
+import { choreAppliesOn, localDate } from '../lib/chores.js';
 
 const router = Router();
 
@@ -58,6 +59,40 @@ router.get(
 
     const personal = db.prepare('SELECT * FROM personal_config WHERE id=1').get();
 
+    // Family members (active) for the avatar row / quick view.
+    const familyMembers = db
+      .prepare('SELECT * FROM family_members WHERE active=1 ORDER BY sort_order ASC, id ASC')
+      .all();
+
+    // Today's chores with done state (filtered by recurrence in JS).
+    const today = localDate();
+    const choresToday = db
+      .prepare('SELECT * FROM chores WHERE active=1 ORDER BY sort_order ASC, id ASC')
+      .all()
+      .filter((c) => choreAppliesOn(c, today))
+      .map((c) => {
+        const done = db
+          .prepare(
+            'SELECT 1 FROM chore_completions WHERE chore_id=? AND completed_on=?'
+          )
+          .get(c.id, today);
+        return { ...c, done: Boolean(done) };
+      });
+    const choresRemaining = choresToday.filter((c) => !c.done).length;
+
+    // Today's meals.
+    const mealsToday = db
+      .prepare(
+        "SELECT * FROM meals WHERE date=? ORDER BY CASE slot WHEN 'breakfast' THEN 0 WHEN 'lunch' THEN 1 WHEN 'dinner' THEN 2 ELSE 3 END, id"
+      )
+      .all(today);
+
+    // Grocery/shopping unchecked count across all lists.
+    const groceryOpen = db
+      .prepare('SELECT COUNT(*) n FROM shopping_items WHERE checked=0')
+      .get().n;
+    const groceryLists = db.prepare('SELECT COUNT(*) n FROM shopping_lists').get().n;
+
     res.json({
       todayEvents,
       upcomingEvents,
@@ -67,6 +102,12 @@ router.get(
       pinnedNotes,
       countdowns,
       personal,
+      familyMembers,
+      choresToday,
+      choresRemaining,
+      mealsToday,
+      groceryOpen,
+      groceryLists,
       generatedAt: new Date().toISOString(),
     });
   })

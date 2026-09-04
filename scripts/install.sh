@@ -19,7 +19,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUN_USER="${SUDO_USER:-$(whoami)}"
-NODE_MAJOR=20
+NODE_MAJOR=22  # better-sqlite3 v13 requires Node >= 22
 
 log()  { printf '\033[1;35m[install]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
@@ -74,10 +74,12 @@ install_node() {
   log "Installing Node.js ${NODE_MAJOR}.x via NodeSource…"
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | sudo -E bash -
   sudo apt-get install -y nodejs
+  # Native modules compiled against an older Node ABI will segfault — force rebuild.
+  rm -rf "$APP_DIR/server/node_modules"
 }
 if command -v node >/dev/null 2>&1; then
   CUR="$(node -v | sed 's/v\([0-9]*\).*/\1/')"
-  if [[ "$CUR" -lt 18 ]]; then
+  if [[ "$CUR" -lt "$NODE_MAJOR" ]]; then
     warn "Node $(node -v) is too old; installing ${NODE_MAJOR}.x"
     install_node
   else
@@ -126,7 +128,6 @@ render() {
       "$1"
 }
 render "$APP_DIR/config/wall-planner.service"      | sudo tee /etc/systemd/system/wall-planner.service      >/dev/null
-render "$APP_DIR/config/wall-planner-kiosk.service"| sudo tee /etc/systemd/system/wall-planner-kiosk.service>/dev/null
 render "$APP_DIR/config/wall-planner-sleep.service"| sudo tee /etc/systemd/system/wall-planner-sleep.service>/dev/null
 render "$APP_DIR/config/wall-planner-wake.service" | sudo tee /etc/systemd/system/wall-planner-wake.service >/dev/null
 
@@ -163,8 +164,37 @@ sudo systemctl enable --now avahi-daemon 2>/dev/null || true
 log "Reloading systemd and enabling services…"
 sudo systemctl daemon-reload
 sudo systemctl enable --now wall-planner.service
-sudo systemctl enable --now wall-planner-kiosk.service || \
-  warn "Kiosk service enabled but may need a graphical session (see docs)."
+# Remove any legacy kiosk system unit from older installs. A system-level unit
+# with WantedBy=graphical-session.target never fires (that target is per-user),
+# so the kiosk is launched from the desktop session autostart instead.
+sudo systemctl disable --now wall-planner-kiosk.service 2>/dev/null || true
+sudo rm -f /etc/systemd/system/wall-planner-kiosk.service
+
+log "Installing kiosk desktop-session autostart…"
+KIOSK_LOOP="$APP_DIR/scripts/kiosk-loop.sh"
+cat > "$KIOSK_LOOP" <<LOOP
+#!/bin/bash
+# Wait for the backend, then keep Chromium kiosk alive (relaunch on crash).
+until curl -sf http://localhost:4000/api/health >/dev/null; do sleep 1; done
+while true; do
+  "$APP_DIR/scripts/kiosk.sh"
+  sleep 3
+done
+LOOP
+chmod +x "$KIOSK_LOOP"
+USER_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6)"
+mkdir -p "$USER_HOME/.config/labwc" "$USER_HOME/.config/autostart"
+# labwc (Wayland, Pi OS default) runs this file as a shell script at session start.
+grep -qF "$KIOSK_LOOP" "$USER_HOME/.config/labwc/autostart" 2>/dev/null || \
+  echo "$KIOSK_LOOP &" >> "$USER_HOME/.config/labwc/autostart"
+# XDG autostart covers X11/LXDE/wayfire sessions.
+cat > "$USER_HOME/.config/autostart/wall-planner-kiosk.desktop" <<DESK
+[Desktop Entry]
+Type=Application
+Name=Wall Planner Kiosk
+Exec=$KIOSK_LOOP
+DESK
+chown -R "$RUN_USER":"$RUN_USER" "$USER_HOME/.config/labwc" "$USER_HOME/.config/autostart"
 sudo systemctl enable --now wall-planner-wake.timer wall-planner-sleep.timer || true
 
 log "-----------------------------------------------------------------------"

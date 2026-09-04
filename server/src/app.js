@@ -6,8 +6,13 @@ import config from './config.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 import categories from './routes/categories.js';
+import family from './routes/family.js';
 import events from './routes/events.js';
 import tasks from './routes/tasks.js';
+import chores from './routes/chores.js';
+import meals from './routes/meals.js';
+import shopping from './routes/shopping.js';
+import subscriptions from './routes/subscriptions.js';
 import notes from './routes/notes.js';
 import school from './routes/school.js';
 import countdowns from './routes/countdowns.js';
@@ -47,8 +52,13 @@ export function createApp() {
   });
 
   app.use('/api/categories', categories);
+  app.use('/api/family', family);
   app.use('/api/events', events);
   app.use('/api/tasks', tasks);
+  app.use('/api/chores', chores);
+  app.use('/api/meals', meals);
+  app.use('/api/shopping', shopping);
+  app.use('/api/subscriptions', subscriptions);
   app.use('/api/notes', notes);
   app.use('/api/school', school);
   app.use('/api/countdowns', countdowns);

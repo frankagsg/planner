@@ -12,6 +12,7 @@ const TaskSchema = z.object({
   due: isoDate.optional().nullable(),
   priority: z.enum(['low', 'normal', 'high']).default('normal'),
   category_id: z.coerce.number().int().positive().optional().nullable(),
+  member_id: z.coerce.number().int().positive().optional().nullable(),
   completed: z.coerce.boolean().optional(),
   sort_order: z.coerce.number().int().optional(),
 });
@@ -32,6 +33,11 @@ router.get(
     } else if (filter === 'active') {
       sql += ' WHERE completed = 0';
     }
+    // Optional per-member filter, composed onto whatever filter clause exists.
+    if (req.query.member_id) {
+      sql += (sql.includes('WHERE') ? ' AND' : ' WHERE') + ' member_id = @member_id';
+      params.member_id = Number(req.query.member_id);
+    }
     sql += ' ORDER BY completed ASC, (due IS NULL) ASC, due ASC, sort_order ASC, id DESC';
     res.json(db.prepare(sql).all(params));
   })
@@ -43,13 +49,14 @@ router.post(
     const data = TaskSchema.parse(req.body);
     const info = db
       .prepare(
-        `INSERT INTO tasks (title, notes, due, priority, category_id, completed, completed_at, sort_order)
-         VALUES (@title,@notes,@due,@priority,@category_id,@completed,@completed_at,@sort_order)`
+        `INSERT INTO tasks (title, notes, due, priority, category_id, member_id, completed, completed_at, sort_order)
+         VALUES (@title,@notes,@due,@priority,@category_id,@member_id,@completed,@completed_at,@sort_order)`
       )
       .run({
         notes: null,
         due: null,
         category_id: null,
+        member_id: null,
         sort_order: 0,
         ...data,
         completed: data.completed ? 1 : 0,
@@ -77,7 +84,7 @@ router.put(
     };
     db.prepare(
       `UPDATE tasks SET title=@title, notes=@notes, due=@due, priority=@priority,
-       category_id=@category_id, completed=@completed, completed_at=@completed_at,
+       category_id=@category_id, member_id=@member_id, completed=@completed, completed_at=@completed_at,
        sort_order=@sort_order, updated_at=datetime('now') WHERE id=@id`
     ).run({ ...merged, id });
     res.json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(id));

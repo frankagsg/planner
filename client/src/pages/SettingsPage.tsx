@@ -14,12 +14,28 @@ import {
   MoonStar,
   Download,
   Upload,
+  Users,
+  Rss,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Pencil,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useSettings } from '../context/SettingsContext';
 import { useFeedback } from '../components/ui/Feedback';
-import { Field, Toggle } from '../components/ui/Field';
-import type { GoogleStatus, GoogleCalendar, BackupInfo } from '../types';
+import { Field, Toggle, ColorPicker } from '../components/ui/Field';
+import { Modal } from '../components/ui/Modal';
+import { MemberAvatar, MemberSelect } from '../components/MemberBadge';
+import { useFamily } from '../hooks/useFamily';
+import type {
+  GoogleStatus,
+  GoogleCalendar,
+  BackupInfo,
+  FamilyMember,
+  CalendarSubscription,
+} from '../types';
 
 const ACCENTS = [
   { key: 'blush', label: 'Blush', color: '#e382a8' },
@@ -31,9 +47,11 @@ const ACCENTS = [
 
 type Tab =
   | 'general'
+  | 'family'
   | 'display'
   | 'appearance'
   | 'calendar'
+  | 'calendars'
   | 'weather'
   | 'personal'
   | 'google'
@@ -47,9 +65,11 @@ export default function SettingsPage() {
 
   const TABS: { key: Tab; label: string; icon: typeof Monitor }[] = [
     { key: 'general', label: 'General', icon: SettingsIcon },
+    { key: 'family', label: 'Family', icon: Users },
     { key: 'display', label: 'Display', icon: Monitor },
     { key: 'appearance', label: 'Appearance', icon: Palette },
     { key: 'calendar', label: 'Calendar', icon: CalendarDays },
+    { key: 'calendars', label: 'Calendars', icon: Rss },
     { key: 'weather', label: 'Weather', icon: CloudSun },
     { key: 'personal', label: 'Personal', icon: Heart },
     { key: 'google', label: 'Google', icon: Cloud },
@@ -78,9 +98,11 @@ export default function SettingsPage() {
 
         <div className="flex-1 card p-6">
           {tab === 'general' && <GeneralTab get={get} update={update} />}
+          {tab === 'family' && <FamilyTab toast={toast} confirm={confirm} />}
           {tab === 'display' && <DisplayTab get={get} update={update} />}
           {tab === 'appearance' && <AppearanceTab get={get} update={update} />}
           {tab === 'calendar' && <CalendarTab get={get} update={update} />}
+          {tab === 'calendars' && <CalendarsTab toast={toast} confirm={confirm} />}
           {tab === 'weather' && <WeatherTab get={get} update={update} toast={toast} />}
           {tab === 'personal' && <PersonalTab get={get} update={update} />}
           {tab === 'google' && <GoogleTab toast={toast} />}
@@ -524,6 +546,328 @@ function SystemTab({ toast, confirm }: { toast: (m: string, k?: any) => void; co
       <p className="text-sm text-content-faint">
         Reboot/shutdown/restore require admin rights (LAN or admin token) and are never exposed publicly.
       </p>
+    </div>
+  );
+}
+
+/* ------------------------------- Family --------------------------------- */
+const MEMBER_SWATCHES = [
+  '#e382a8', '#e2825a', '#f0b866', '#7cc4a4', '#6c9ae8',
+  '#9580e0', '#c98bdb', '#5eb0a0', '#e2a04e', '#7aa2f7',
+];
+
+interface MemberEdit {
+  id?: number;
+  name: string;
+  color: string;
+  emoji: string;
+  role: FamilyMember['role'];
+  birthday: string;
+}
+
+function FamilyTab({ toast, confirm }: { toast: (m: string, k?: any) => void; confirm: any }) {
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [edit, setEdit] = useState<MemberEdit | null>(null);
+
+  const load = async () => {
+    try {
+      setMembers(await api.get<FamilyMember[]>('/family'));
+    } catch {
+      toast('Could not load family', 'error');
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const save = async () => {
+    if (!edit) return;
+    if (!edit.name.trim()) return toast('Give them a name', 'error');
+    const payload = {
+      name: edit.name.trim(),
+      color: edit.color,
+      emoji: edit.emoji || null,
+      role: edit.role,
+      birthday: edit.birthday || null,
+    };
+    try {
+      if (edit.id) await api.put(`/family/${edit.id}`, payload);
+      else await api.post('/family', payload);
+      toast('Saved', 'success');
+      setEdit(null);
+      load();
+    } catch (e: any) {
+      toast(e?.message || 'Could not save', 'error');
+    }
+  };
+
+  const remove = async (m: FamilyMember) => {
+    const ok = await confirm({
+      title: `Remove ${m.name}?`,
+      message: 'Their events, tasks, and chores become shared (not deleted).',
+      danger: true,
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
+    await api.del(`/family/${m.id}`);
+    load();
+  };
+
+  const move = async (idx: number, dir: -1 | 1) => {
+    const next = [...members];
+    const target = idx + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setMembers(next);
+    await api.put('/family/reorder', { order: next.map((m) => m.id) });
+  };
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-content-soft">
+          Add everyone in the household. Colors tag their events, tasks, and chores across the app.
+        </p>
+        <button
+          className="btn-primary shrink-0"
+          onClick={() =>
+            setEdit({ name: '', color: MEMBER_SWATCHES[members.length % MEMBER_SWATCHES.length], emoji: '', role: 'child', birthday: '' })
+          }
+        >
+          <Plus size={20} /> Add
+        </button>
+      </div>
+
+      {members.length === 0 ? (
+        <div className="card p-8 text-center text-content-faint">No members yet. Add your first above.</div>
+      ) : (
+        <ul className="space-y-2">
+          {members.map((m, i) => (
+            <li key={m.id} className="card p-3 flex items-center gap-3" style={{ borderLeft: `6px solid ${m.color}` }}>
+              <MemberAvatar member={m} size={44} />
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-content">{m.name}</div>
+                <div className="text-sm text-content-faint capitalize">{m.role}</div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button className="p-2 text-content-faint disabled:opacity-30" disabled={i === 0} onClick={() => move(i, -1)}>
+                  <ArrowUp size={20} />
+                </button>
+                <button className="p-2 text-content-faint disabled:opacity-30" disabled={i === members.length - 1} onClick={() => move(i, 1)}>
+                  <ArrowDown size={20} />
+                </button>
+                <button className="p-2 text-content-faint" onClick={() => setEdit({ id: m.id, name: m.name, color: m.color, emoji: m.emoji || '', role: m.role, birthday: m.birthday || '' })}>
+                  <Pencil size={20} />
+                </button>
+                <button className="p-2 text-content-faint hover:text-rose-500" onClick={() => remove(m)}>
+                  <Trash2 size={20} />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Modal
+        open={!!edit}
+        onClose={() => setEdit(null)}
+        title={edit?.id ? 'Edit member' : 'Add member'}
+        footer={
+          <>
+            <button className="btn-ghost" onClick={() => setEdit(null)}>Cancel</button>
+            <button className="btn-primary" onClick={save}>Save</button>
+          </>
+        }
+      >
+        {edit && (
+          <div>
+            <Field label="Name">
+              <input className="input" autoFocus value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Emoji (optional)" hint="Shown as their avatar; else their initial.">
+                <input className="input" value={edit.emoji} maxLength={4} onChange={(e) => setEdit({ ...edit, emoji: e.target.value })} placeholder="🦊" />
+              </Field>
+              <Field label="Role">
+                <select className="input" data-vkeyboard="off" value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as FamilyMember['role'] })}>
+                  <option value="adult">Adult</option>
+                  <option value="child">Child</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="Birthday (optional)">
+              <input type="date" data-vkeyboard="off" className="input" value={edit.birthday} onChange={(e) => setEdit({ ...edit, birthday: e.target.value })} />
+            </Field>
+            <Field label="Color">
+              <ColorPicker value={edit.color} onChange={(c) => setEdit({ ...edit, color: c })} swatches={MEMBER_SWATCHES} />
+            </Field>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+/* ------------------------------ Calendars ------------------------------- */
+interface SubEdit {
+  id?: number;
+  name: string;
+  url: string;
+  color: string;
+  member_id: number | null;
+  enabled: boolean;
+}
+
+function CalendarsTab({ toast, confirm }: { toast: (m: string, k?: any) => void; confirm: any }) {
+  const { members } = useFamily();
+  const [subs, setSubs] = useState<CalendarSubscription[]>([]);
+  const [edit, setEdit] = useState<SubEdit | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    try {
+      setSubs(await api.get<CalendarSubscription[]>('/subscriptions'));
+    } catch {
+      toast('Could not load subscriptions', 'error');
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const save = async () => {
+    if (!edit) return;
+    if (!edit.name.trim() || !edit.url.trim()) return toast('Name and URL are required', 'error');
+    const payload = {
+      name: edit.name.trim(),
+      url: edit.url.trim(),
+      color: edit.color,
+      member_id: edit.member_id,
+      enabled: edit.enabled,
+    };
+    setBusy(true);
+    try {
+      if (edit.id) await api.put(`/subscriptions/${edit.id}`, payload);
+      else {
+        const r = await api.post<{ sync: { error?: string; synced?: number } }>('/subscriptions', payload);
+        if (r.sync?.error) toast(`Added, but sync failed: ${r.sync.error}`, 'error');
+        else toast(`Added — synced ${r.sync?.synced ?? 0} events`, 'success');
+      }
+      setEdit(null);
+      load();
+    } catch (e: any) {
+      toast(e?.message || 'Could not save', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const syncOne = async (s: CalendarSubscription) => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ sync: { error?: string; synced?: number } }>(`/subscriptions/${s.id}/sync`);
+      if (r.sync?.error) toast(`Sync failed: ${r.sync.error}`, 'error');
+      else toast(`Synced ${r.sync?.synced ?? 0} events`, 'success');
+      load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (s: CalendarSubscription) => {
+    const ok = await confirm({
+      title: 'Remove subscription?',
+      message: `"${s.name}" and its imported events will be removed.`,
+      danger: true,
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
+    await api.del(`/subscriptions/${s.id}`);
+    load();
+  };
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-content-soft">
+          Subscribe to any public iCloud, Outlook, or Google <code>.ics</code> link (read-only).
+        </p>
+        <button
+          className="btn-primary shrink-0"
+          onClick={() => setEdit({ name: '', url: '', color: '#6c9ae8', member_id: null, enabled: true })}
+        >
+          <Plus size={20} /> Add
+        </button>
+      </div>
+      <p className="text-sm text-content-faint mb-4">
+        See <span className="font-semibold">docs/ics-calendar-setup.md</span> for how to get the secret URL from iCloud and Outlook.
+      </p>
+
+      {subs.length === 0 ? (
+        <div className="card p-8 text-center text-content-faint">No calendar subscriptions yet.</div>
+      ) : (
+        <ul className="space-y-2">
+          {subs.map((s) => (
+            <li key={s.id} className="card p-3 flex items-center gap-3" style={{ borderLeft: `6px solid ${s.color}` }}>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-content flex items-center gap-2">
+                  {s.name}
+                  {!s.enabled && <span className="chip bg-line text-content-soft">Off</span>}
+                </div>
+                <div className="text-sm text-content-faint truncate">{s.url}</div>
+                {s.last_error ? (
+                  <div className="text-sm text-rose-500 mt-0.5">⚠ {s.last_error}</div>
+                ) : s.last_synced ? (
+                  <div className="text-xs text-content-faint mt-0.5">Last synced {s.last_synced}</div>
+                ) : null}
+              </div>
+              <button className="btn-ghost !py-2 !px-3" disabled={busy} onClick={() => syncOne(s)}>
+                <RotateCw size={18} />
+              </button>
+              <button className="p-2 text-content-faint" onClick={() => setEdit({ id: s.id, name: s.name, url: s.url, color: s.color, member_id: s.member_id ?? null, enabled: !!s.enabled })}>
+                <Pencil size={20} />
+              </button>
+              <button className="p-2 text-content-faint hover:text-rose-500" onClick={() => remove(s)}>
+                <Trash2 size={20} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Modal
+        open={!!edit}
+        onClose={() => setEdit(null)}
+        title={edit?.id ? 'Edit subscription' : 'Add subscription'}
+        footer={
+          <>
+            <button className="btn-ghost" onClick={() => setEdit(null)}>Cancel</button>
+            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Working…' : 'Save'}</button>
+          </>
+        }
+      >
+        {edit && (
+          <div>
+            <Field label="Name">
+              <input className="input" autoFocus value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="Work · iCloud" />
+            </Field>
+            <Field label="ICS URL" hint="A public/secret .ics or webcal link.">
+              <input className="input" inputMode="url" value={edit.url} onChange={(e) => setEdit({ ...edit, url: e.target.value })} placeholder="https://…/calendar.ics" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Color">
+                <ColorPicker value={edit.color} onChange={(c) => setEdit({ ...edit, color: c })} swatches={MEMBER_SWATCHES} />
+              </Field>
+              <Field label="Owner (optional)">
+                <MemberSelect members={members} value={edit.member_id} onChange={(id) => setEdit({ ...edit, member_id: id })} sharedLabel="Household" />
+              </Field>
+            </div>
+            <label className="flex items-center gap-3 mt-2">
+              <Toggle checked={edit.enabled} onChange={(v) => setEdit({ ...edit, enabled: v })} label="Enabled" />
+            </label>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

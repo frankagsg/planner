@@ -45,12 +45,31 @@ automatically on boot.
 
 ## Features
 
-- **Home dashboard** — greeting, clock, weather, today's events & tasks, school
-  progress, pinned notes, countdowns, couples card.
+- **Home dashboard** — greeting, clock, weather, today's events & tasks, chores,
+  meals, grocery count, family avatar row, school progress, pinned notes,
+  countdowns, couples card, plus a one-tap **Photo Mode** frame.
+- **Family members** — unlimited profiles (name, color, emoji/initial, birthday,
+  adult/child), reorderable, fully local. Events, tasks, and chores can belong to
+  a person and are **color-coded** across the app, with an *Everyone / per-person*
+  filter on Calendar, Tasks, and Chores.
 - **Calendar** — FullCalendar with month / week / day / agenda views, categories
-  with colors, tap a slot to create, tap an event to edit/delete/reschedule.
-- **Tasks** — name, due, priority, category, notes; Today / Upcoming / Completed;
-  gentle completion animation.
+  with colors, per-member color-coding + filter, tap a slot to create, tap an
+  event to edit/delete/reschedule.
+- **Tasks** — name, due, priority, category, member, notes; Today / Upcoming /
+  Completed; gentle completion animation.
+- **Chores & rewards** — kid-friendly chore chart with points, daily/weekly/
+  specific-day recurrence and **auto rollover**, big tap-to-complete targets, and
+  a weekly + all-time **points leaderboard**. Encouraging, not stressful.
+- **Meals** — weekly 7-day × breakfast/lunch/dinner/snack grid; tap a slot to
+  add/edit; one tap to **push a meal's ingredients onto the grocery list**.
+- **Lists** — multiple shopping/grocery lists with big checkboxes, on-screen-
+  keyboard entry, per-item member tags, and clear-checked. A **Groceries** list
+  is seeded by default.
+- **Multi-calendar sync (ICS)** — subscribe to any public iCloud / Outlook /
+  Google / school `.ics` (or `webcal://`) feed, read-only, color-coded, on the
+  same auto-sync schedule as Google — no OAuth required. Robust: URLs are
+  validated, failures are stored per-feed and never crash the app. See
+  [ICS calendar setup](docs/ics-calendar-setup.md).
 - **School** — classes, clinicals, assignments, exams, study, reading; due
   today/tomorrow/this-week/overdue filters; encouraging (not stressful) progress
   summary like “4 remaining · you’ve got this”.
@@ -62,8 +81,9 @@ automatically on boot.
   gracefully with last-known data.
 - **Clock/date** — 12/24h, seconds toggle, date format; uses local system time.
 - **Countdowns** — multiple, customizable.
-- **Settings** — General / Display / Appearance / Calendar / Weather / Personal /
-  Google / Backups / System, with confirmation before reboot/shutdown.
+- **Settings** — General / **Family** / Display / Appearance / Calendar /
+  **Calendars (ICS)** / Weather / Personal / Google / Backups / System, with
+  confirmation before reboot/shutdown.
 - **Google Calendar** — real OAuth 2.0, tokens stored on disk `chmod 600` (never
   in the frontend), import/display/sync, multiple calendars.
 - **First-run wizard** — 8 guided steps.
@@ -155,6 +175,7 @@ Admin/system endpoints are restricted to the LAN (or an admin token).
 ## Docs
 
 - [Google Calendar setup](docs/google-calendar-setup.md)
+- [ICS calendar subscriptions (iCloud / Outlook / any public feed)](docs/ics-calendar-setup.md)
 - [Weather setup](docs/weather-setup.md)
 - [Kiosk & systemd](docs/kiosk-and-systemd.md)
 - [Backup & restore](docs/backup-and-restore.md)

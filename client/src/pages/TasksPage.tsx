@@ -7,6 +7,8 @@ import { Modal } from '../components/ui/Modal';
 import { Field } from '../components/ui/Field';
 import type { Task, Category } from '../types';
 import { toLocalInput, fromLocalInput } from '../lib/dates';
+import { useFamily } from '../hooks/useFamily';
+import { MemberFilter, MemberDot, MemberSelect } from '../components/MemberBadge';
 
 type Filter = 'today' | 'upcoming' | 'completed';
 
@@ -17,6 +19,7 @@ interface EditState {
   due: string;
   priority: Task['priority'];
   category_id: number | null;
+  member_id: number | null;
 }
 
 const empty = (): EditState => ({
@@ -25,6 +28,7 @@ const empty = (): EditState => ({
   due: '',
   priority: 'normal',
   category_id: null,
+  member_id: null,
 });
 
 const PRIORITY_COLOR: Record<Task['priority'], string> = {
@@ -35,7 +39,9 @@ const PRIORITY_COLOR: Record<Task['priority'], string> = {
 
 export default function TasksPage() {
   const { toast, confirm } = useFeedback();
+  const { members, byId } = useFamily();
   const [filter, setFilter] = useState<Filter>('today');
+  const [memberFilter, setMemberFilter] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [edit, setEdit] = useState<EditState | null>(null);
@@ -43,8 +49,9 @@ export default function TasksPage() {
 
   const load = useCallback(async () => {
     try {
+      const memberQ = memberFilter ? `&member_id=${memberFilter}` : '';
       const [t, c] = await Promise.all([
-        api.get<Task[]>(`/tasks?filter=${filter === 'completed' ? 'completed' : filter}`, true),
+        api.get<Task[]>(`/tasks?filter=${filter === 'completed' ? 'completed' : filter}${memberQ}`, true),
         api.get<Category[]>('/categories', true),
       ]);
       setTasks(t);
@@ -52,7 +59,7 @@ export default function TasksPage() {
     } catch {
       toast('Could not load tasks', 'error');
     }
-  }, [filter, toast]);
+  }, [filter, memberFilter, toast]);
 
   useEffect(() => {
     load();
@@ -81,6 +88,7 @@ export default function TasksPage() {
       due: edit.due ? fromLocalInput(edit.due) : null,
       priority: edit.priority,
       category_id: edit.category_id,
+      member_id: edit.member_id,
     };
     try {
       if (edit.id) await api.put(`/tasks/${edit.id}`, payload);
@@ -113,6 +121,7 @@ export default function TasksPage() {
       due: task.due ? toLocalInput(new Date(task.due)) : '',
       priority: task.priority,
       category_id: task.category_id ?? null,
+      member_id: task.member_id ?? null,
     });
 
   const FILTERS: { key: Filter; label: string }[] = [
@@ -130,7 +139,7 @@ export default function TasksPage() {
         </button>
       </div>
 
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-4">
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -141,6 +150,12 @@ export default function TasksPage() {
           </button>
         ))}
       </div>
+
+      {members.length > 0 && (
+        <div className="mb-5">
+          <MemberFilter members={members} value={memberFilter} onChange={setMemberFilter} />
+        </div>
+      )}
 
       {tasks.length === 0 ? (
         <div className="card p-10 text-center text-content-faint text-lg">
@@ -181,6 +196,11 @@ export default function TasksPage() {
                   {t.title}
                 </div>
                 <div className="flex items-center gap-3 text-sm text-content-faint mt-0.5">
+                  {t.member_id && byId(t.member_id) && (
+                    <span className="flex items-center gap-1.5">
+                      <MemberDot color={byId(t.member_id)!.color} /> {byId(t.member_id)!.name}
+                    </span>
+                  )}
                   {t.due && <span>{format(new Date(t.due), 'EEE MMM d, h:mm a')}</span>}
                   {t.priority !== 'normal' && (
                     <span className={`flex items-center gap-1 ${PRIORITY_COLOR[t.priority]}`}>
@@ -252,26 +272,35 @@ export default function TasksPage() {
                 </select>
               </Field>
             </div>
-            <Field label="Category">
-              <select
-                className="input"
-                data-vkeyboard="off"
-                value={edit.category_id ?? ''}
-                onChange={(e) =>
-                  setEdit({
-                    ...edit,
-                    category_id: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-              >
-                <option value="">None</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Category">
+                <select
+                  className="input"
+                  data-vkeyboard="off"
+                  value={edit.category_id ?? ''}
+                  onChange={(e) =>
+                    setEdit({
+                      ...edit,
+                      category_id: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">None</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Assigned to">
+                <MemberSelect
+                  members={members}
+                  value={edit.member_id}
+                  onChange={(id) => setEdit({ ...edit, member_id: id })}
+                />
+              </Field>
+            </div>
             <Field label="Notes">
               <textarea
                 className="input min-h-[5rem]"

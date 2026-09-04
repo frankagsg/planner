@@ -13,6 +13,8 @@ import { Modal } from '../components/ui/Modal';
 import { Field } from '../components/ui/Field';
 import type { EventItem, Category } from '../types';
 import { toLocalInput, fromLocalInput } from '../lib/dates';
+import { useFamily, memberColor } from '../hooks/useFamily';
+import { MemberFilter, MemberSelect } from '../components/MemberBadge';
 
 interface EditState {
   id?: number;
@@ -23,6 +25,7 @@ interface EditState {
   end: string;
   all_day: boolean;
   category_id: number | null;
+  member_id: number | null;
   source?: string;
 }
 
@@ -34,14 +37,17 @@ const emptyEvent = (start?: Date, end?: Date): EditState => ({
   end: toLocalInput(end || new Date(Date.now() + 3600000)),
   all_day: false,
   category_id: null,
+  member_id: null,
 });
 
 export default function CalendarPage() {
   const { get } = useSettings();
   const { toast, confirm } = useFeedback();
+  const { members } = useFamily();
   const calRef = useRef<FullCalendar | null>(null);
-  const [events, setEvents] = useState<EventInput[]>([]);
+  const [rawEvents, setRawEvents] = useState<EventItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [memberFilter, setMemberFilter] = useState<number | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
 
   const load = useCallback(async () => {
@@ -51,23 +57,30 @@ export default function CalendarPage() {
         api.get<Category[]>('/categories', true),
       ]);
       setCategories(cats);
-      const catColor = (id?: number | null) =>
-        cats.find((c) => c.id === id)?.color;
-      setEvents(
-        evs.map((e) => ({
-          id: String(e.id),
-          title: e.title,
-          start: e.start,
-          end: e.end,
-          allDay: !!e.all_day,
-          backgroundColor: e.color || catColor(e.category_id) || undefined,
-          extendedProps: { raw: e },
-        }))
-      );
+      setRawEvents(evs);
     } catch {
       toast('Could not load calendar', 'error');
     }
   }, [toast]);
+
+  // Member color takes priority over category color so people read at a glance;
+  // an explicit per-event color still wins. Filter by member when selected.
+  const catColor = (id?: number | null) => categories.find((c) => c.id === id)?.color;
+  const events: EventInput[] = rawEvents
+    .filter((e) => memberFilter === null || e.member_id === memberFilter)
+    .map((e) => ({
+      id: String(e.id),
+      title: e.title,
+      start: e.start,
+      end: e.end,
+      allDay: !!e.all_day,
+      backgroundColor:
+        e.color ||
+        (e.member_id ? memberColor(members, e.member_id) : undefined) ||
+        catColor(e.category_id) ||
+        undefined,
+      extendedProps: { raw: e },
+    }));
 
   useEffect(() => {
     load();
@@ -89,6 +102,7 @@ export default function CalendarPage() {
       end: toLocalInput(new Date(raw.end)),
       all_day: !!raw.all_day,
       category_id: raw.category_id ?? null,
+      member_id: raw.member_id ?? null,
       source: raw.source,
     });
   };
@@ -104,6 +118,7 @@ export default function CalendarPage() {
       end: fromLocalInput(edit.end),
       all_day: edit.all_day,
       category_id: edit.category_id,
+      member_id: edit.member_id,
     };
     try {
       if (edit.id) await api.put(`/events/${edit.id}`, payload);
@@ -143,6 +158,12 @@ export default function CalendarPage() {
           <Plus size={22} /> New event
         </button>
       </div>
+
+      {members.length > 0 && (
+        <div className="mb-3">
+          <MemberFilter members={members} value={memberFilter} onChange={setMemberFilter} />
+        </div>
+      )}
 
       <div className="card p-4 flex-1 overflow-hidden">
         <FullCalendar
@@ -239,26 +260,35 @@ export default function CalendarPage() {
               />
               <span className="text-lg text-content">All day</span>
             </label>
-            <Field label="Category">
-              <select
-                className="input"
-                data-vkeyboard="off"
-                value={edit.category_id ?? ''}
-                onChange={(e) =>
-                  setEdit({
-                    ...edit,
-                    category_id: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-              >
-                <option value="">None</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Category">
+                <select
+                  className="input"
+                  data-vkeyboard="off"
+                  value={edit.category_id ?? ''}
+                  onChange={(e) =>
+                    setEdit({
+                      ...edit,
+                      category_id: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">None</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Whose">
+                <MemberSelect
+                  members={members}
+                  value={edit.member_id}
+                  onChange={(id) => setEdit({ ...edit, member_id: id })}
+                />
+              </Field>
+            </div>
             <Field label="Location">
               <div className="relative">
                 <MapPin

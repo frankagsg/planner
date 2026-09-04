@@ -30,6 +30,10 @@ command -v unclutter >/dev/null 2>&1 && (unclutter -idle 0.5 -root &) 2>/dev/nul
 PROFILE_DIR="$APP_DIR/.chromium-kiosk"
 mkdir -p "$PROFILE_DIR"
 
+# Clear a stale singleton lock left by an unclean shutdown, so Chromium doesn't
+# refuse to start with "profile appears to be in use".
+rm -f "$PROFILE_DIR/SingletonLock" "$PROFILE_DIR/SingletonCookie" "$PROFILE_DIR/SingletonSocket" 2>/dev/null || true
+
 # Clear previous "exited abnormally" flags so no restore bubble appears.
 PREFS="$PROFILE_DIR/Default/Preferences"
 if [[ -f "$PREFS" ]]; then
@@ -49,5 +53,5 @@ exec "$CHROME_BIN" \
   --check-for-update-interval=31536000 \
   --autoplay-policy=no-user-gesture-required \
   --hide-scrollbars \
-  --ozone-platform-hint=auto \
+  --ozone-platform=wayland \
   --start-fullscreen

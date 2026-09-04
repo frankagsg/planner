@@ -12,6 +12,9 @@ import { SetupWizard } from './pages/SetupWizard';
 import HomePage from './pages/HomePage';
 import CalendarPage from './pages/CalendarPage';
 import TasksPage from './pages/TasksPage';
+import ChoresPage from './pages/ChoresPage';
+import MealsPage from './pages/MealsPage';
+import ListsPage from './pages/ListsPage';
 import SchoolPage from './pages/SchoolPage';
 import NotesPage from './pages/NotesPage';
 import PersonalPage from './pages/PersonalPage';
@@ -45,12 +48,15 @@ export default function App() {
     <div className="h-full flex bg-surface overflow-hidden">
       <Sidebar />
       <main className="flex-1 h-full overflow-y-auto no-scrollbar relative">
-        <div className="min-h-full pb-[var(--vk-pad,0)]">
+        <div className="h-full min-h-full pb-[var(--vk-pad,0)]">
           <ErrorBoundary area="Page" key={location.pathname}>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/chores" element={<ChoresPage />} />
+              <Route path="/meals" element={<MealsPage />} />
+              <Route path="/lists" element={<ListsPage />} />
               <Route path="/school" element={<SchoolPage />} />
               <Route path="/notes" element={<NotesPage />} />
               <Route path="/personal" element={<PersonalPage />} />
