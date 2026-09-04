@@ -1,0 +1,10 @@
+[Unit]
+Description=Wall Planner — morning screen-on timer
+
+[Timer]
+# @TIME@ is substituted by install.sh from SCREEN_WAKE in .env (e.g. 07:00).
+OnCalendar=*-*-* @TIME@:00
+Persistent=false
+
+[Install]
+WantedBy=timers.target

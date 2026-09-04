@@ -1,0 +1,10 @@
+[Unit]
+Description=Wall Planner — nightly screen-off timer
+
+[Timer]
+# @TIME@ is substituted by install.sh from SCREEN_SLEEP in .env (e.g. 23:30).
+OnCalendar=*-*-* @TIME@:00
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+client/dist/
+server/dist/
+
+# Environment / secrets
+.env
+.env.local
+config/*.local.json
+config/google-token.json
+config/oauth-tokens.json
+
+# Database (runtime data — keep migrations, not the live DB)
+database/*.db
+database/*.db-shm
+database/*.db-wal
+database/*.sqlite
+
+# Backups (generated)
+backups/*.zip
+backups/*.tar.gz
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# User photos (personal)
+client/public/photos/*
+!client/public/photos/.gitkeep

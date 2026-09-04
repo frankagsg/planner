@@ -1,0 +1,77 @@
+/* Reserve space at the bottom of the scroll area while the virtual keyboard is
+   open so focused fields are never permanently covered. */
+body.vk-open {
+  --vk-pad: 22rem;
+}
+
+/* ------------------------- FullCalendar theming ------------------------- */
+.fc {
+  --fc-border-color: rgb(var(--line));
+  --fc-today-bg-color: rgb(var(--accent) / 0.08);
+  --fc-neutral-bg-color: rgb(var(--surface-raised));
+  --fc-page-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  font-family: inherit;
+}
+.fc .fc-toolbar-title {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 1.6rem;
+  color: rgb(var(--content));
+}
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number,
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-list-day-text,
+.fc .fc-list-day-side-text {
+  color: rgb(var(--content-soft));
+  text-decoration: none;
+  padding: 0.4rem;
+}
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  color: rgb(var(--accent-ink));
+  font-weight: 800;
+}
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: rgb(var(--line) / 0.7);
+}
+.fc .fc-event {
+  border-radius: 0.6rem;
+  padding: 2px 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+/* Bigger touch targets for day cells */
+.fc .fc-daygrid-day-frame {
+  min-height: 4.5rem;
+}
+.fc .fc-list-event td {
+  cursor: pointer;
+  padding: 0.9rem 0.75rem;
+}
+.fc .fc-list-event:hover td {
+  background: rgb(var(--accent) / 0.08);
+}
+/* Hide default toolbar buttons styling in favor of our own where used */
+.fc .fc-button-primary {
+  background: rgb(var(--surface-raised));
+  border-color: rgb(var(--line));
+  color: rgb(var(--content));
+  text-transform: capitalize;
+  font-weight: 700;
+  border-radius: 0.9rem;
+  padding: 0.55rem 1rem;
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:hover {
+  background: rgb(var(--accent));
+  border-color: rgb(var(--accent));
+  color: #fff;
+}
+.fc .fc-button-primary:focus {
+  box-shadow: 0 0 0 3px rgb(var(--accent) / 0.25);
+}
+.dark .fc {
+  color: rgb(var(--content));
+}
