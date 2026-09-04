@@ -119,7 +119,7 @@ On a fresh Raspberry Pi OS Bookworm (64-bit) with the touchscreen attached and
 Wi-Fi connected:
 
 ```bash
-git clone <your-repo-url> wall-planner   # or copy the folder to the Pi
+git clone <https://github.com/frankagsg/planner.git> wall-planner   # or copy the folder to the Pi
 cd wall-planner
 bash scripts/install.sh                  # installs everything, sets up systemd
 nano .env                                # add Google + weather credentials
