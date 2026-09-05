@@ -14,7 +14,7 @@ body.vk-open {
   font-family: inherit;
 }
 .fc .fc-toolbar-title {
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: var(--planner-heading-font, 'Baloo 2', system-ui, sans-serif);
   font-size: 1.6rem;
   color: rgb(var(--content));
 }

@@ -108,3 +108,48 @@
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* FullCalendar theming overrides live in calendar.css */
+
+html { font-size: var(--planner-font-size, 16px); }
+body, .font-sans { font-family: var(--planner-font, 'Nunito', system-ui, sans-serif); }
+.font-display { font-family: var(--planner-heading-font, 'Baloo 2', system-ui, sans-serif); }
+.card {
+  background-color: rgb(var(--surface-card) / var(--card-opacity, 1));
+  border-radius: var(--card-radius, 24px);
+  border-width: var(--card-border, 1px);
+  box-shadow: var(--card-shadow);
+}
+.planner-sidebar { background-color: rgb(var(--surface-card) / max(.85, var(--card-opacity, 1))); }
+.planner-dialog, .appearance-settings-panel { background-color: rgb(var(--surface-card)); }
+.btn-primary { color: rgb(var(--accent-label, 255 255 255)); }
+.planner-background { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.planner-background-art { position: absolute; inset: 0; }
+.planner-home .grid { gap: var(--planner-gap, 20px); }
+.planner-home .space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: var(--planner-gap, 20px); }
+.planner-home .card.p-5 { padding: var(--planner-card-pad, 20px); }
+button:disabled { opacity: .55; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid rgb(var(--accent)); outline-offset: 3px;
+}
+input[type='range'] { min-height: 44px; width: 100%; accent-color: rgb(var(--accent)); }
+input[type='color'] { min-width: 52px; height: 48px; border: 1px solid rgb(var(--line)); border-radius: 12px; padding: 5px; cursor: pointer; }
+.appearance-editor { color: rgb(var(--content)); }
+.appearance-preview { position: relative; isolation: isolate; overflow: hidden; min-height: 300px; border-radius: 20px; padding: 24px; background: rgb(var(--surface)); color: rgb(var(--content)); font-family: var(--planner-font); }
+.appearance-preview .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--planner-gap); }
+.appearance-preview .card { padding: var(--planner-card-pad); }
+.appearance-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.appearance-section { border-top: 1px solid rgb(var(--line)); padding-top: 24px; margin-top: 24px; }
+.appearance-actions { position: sticky; bottom: 0; z-index: 10; background: rgb(var(--surface-card)); border: 1px solid rgb(var(--line)); border-radius: 16px; padding: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.appearance-preset { border: 2px solid rgb(var(--line)); border-radius: 16px; overflow: hidden; text-align: left; min-height: 96px; }
+@media (max-width: 640px) {
+  .planner-sidebar { width: 64px; }
+  .planner-sidebar .nav-item { min-width: 0; padding: 12px 4px; }
+  .planner-sidebar .nav-item span { display: none; }
+  .planner-settings { padding: 16px; }
+  .appearance-controls { grid-template-columns: 1fr; }
+  .appearance-preview { padding: 16px; }
+  .appearance-preview .preview-grid { grid-template-columns: 1fr; }
+  .appearance-actions { gap: 8px; }
+  .appearance-actions > span { width: 100%; }
+  .appearance-actions button { font-size: 14px; padding: 8px 12px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

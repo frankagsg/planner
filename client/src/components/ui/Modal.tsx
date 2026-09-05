@@ -26,7 +26,7 @@ export function Modal({ open, onClose, title, children, footer, wide }: ModalPro
       onClick={onClose}
     >
       <div
-        className={`card w-full ${wide ? 'max-w-3xl' : 'max-w-xl'} max-h-[92vh] overflow-hidden
+        className={`card planner-dialog w-full ${wide ? 'max-w-3xl' : 'max-w-xl'} max-h-[92vh] overflow-hidden
                     flex flex-col animate-slide-in sm:animate-fade-up`}
         onClick={(e) => e.stopPropagation()}
       >

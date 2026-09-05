@@ -46,7 +46,7 @@ export function readCache<T>(path: string): T | null {
   }
 }
 
-function writeCache(path: string, data: unknown) {
+export function writeCache(path: string, data: unknown) {
   try {
     localStorage.setItem(cacheKey(path), JSON.stringify(data));
   } catch {

@@ -45,6 +45,10 @@ automatically on boot.
 
 ## Features
 
+- **Appearance studio** — five starter themes, custom light/dark palettes,
+  scheduled themes, fonts, card styling, photo/gradient/slideshow backgrounds,
+  live preview, and saved/importable presets. See [appearance guide](docs/appearance.md).
+
 - **Home dashboard** — greeting, clock, weather, today's events & tasks, chores,
   meals, grocery count, family avatar row, school progress, pinned notes,
   countdowns, couples card, plus a one-tap **Photo Mode** frame.

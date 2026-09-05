@@ -31,6 +31,8 @@ import { Field, Toggle, ColorPicker } from '../components/ui/Field';
 import { Modal } from '../components/ui/Modal';
 import { MemberAvatar, MemberSelect } from '../components/MemberBadge';
 import { useFamily } from '../hooks/useFamily';
+import AppearanceEditor from '../components/appearance/AppearanceEditor';
+import { readAppearance } from '../lib/appearance';
 import type {
   GoogleStatus,
   GoogleCalendar,
@@ -38,14 +40,6 @@ import type {
   FamilyMember,
   CalendarSubscription,
 } from '../types';
-
-const ACCENTS = [
-  { key: 'blush', label: 'Blush', color: '#e382a8' },
-  { key: 'lavender', label: 'Lavender', color: '#9580e0' },
-  { key: 'sage', label: 'Sage', color: '#6fb291' },
-  { key: 'sky', label: 'Sky', color: '#6c9ae8' },
-  { key: 'amber', label: 'Amber', color: '#e2a04e' },
-];
 
 type Tab =
   | 'general'
@@ -82,7 +76,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="planner-settings p-6 max-w-[1400px] mx-auto">
       <h1 className="text-3xl font-display font-bold text-content flex items-center gap-2 mb-5">
         <SettingsIcon className="text-accent" /> Settings
       </h1>
@@ -100,16 +94,16 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <div className="flex-1 card p-6">
+        <div className="appearance-settings-panel flex-1 min-w-0 card p-4 sm:p-6">
           {tab === 'general' && <GeneralTab get={get} update={update} />}
           {tab === 'family' && <FamilyTab toast={toast} confirm={confirm} />}
           {tab === 'display' && <DisplayTab get={get} update={update} />}
-          {tab === 'appearance' && <AppearanceTab get={get} update={update} />}
+          <div hidden={tab !== 'appearance'}><AppearanceEditor /></div>
           {tab === 'calendar' && <CalendarTab get={get} update={update} />}
           {tab === 'calendars' && <CalendarsTab toast={toast} confirm={confirm} />}
           {tab === 'weather' && <WeatherTab get={get} update={update} toast={toast} />}
           {tab === 'personal' && <PersonalTab get={get} update={update} />}
-          {tab === 'photos' && <PhotosTab get={get} update={update} toast={toast} confirm={confirm} />}
+          {tab === 'photos' && <PhotosTab toast={toast} confirm={confirm} />}
           {tab === 'google' && <GoogleTab toast={toast} />}
           {tab === 'backups' && <BackupsTab toast={toast} confirm={confirm} />}
           {tab === 'system' && <SystemTab toast={toast} confirm={confirm} />}
@@ -192,37 +186,6 @@ function DisplayTab({ get, update }: { get: GetFn; update: UpdateFn }) {
           </Field>
         </div>
       </div>
-    </div>
-  );
-}
-
-function AppearanceTab({ get, update }: { get: GetFn; update: UpdateFn }) {
-  const theme = get<string>('display.theme', 'auto');
-  const accent = get<string>('display.accent', 'blush');
-  return (
-    <div className="max-w-lg space-y-6">
-      <Field label="Theme">
-        <div className="flex gap-2">
-          {['light', 'dark', 'auto'].map((t) => (
-            <button key={t} onClick={() => update({ 'display.theme': t })}
-              className={`btn flex-1 ${theme === t ? 'btn-primary' : 'btn-ghost'}`}>
-              {t === 'auto' ? 'Auto' : t[0].toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-      </Field>
-      <Field label="Accent color">
-        <div className="flex gap-3 flex-wrap">
-          {ACCENTS.map((a) => (
-            <button key={a.key} onClick={() => update({ 'display.accent': a.key })}
-              className={`flex flex-col items-center gap-1.5 ${accent === a.key ? 'scale-110' : ''} transition`}>
-              <span className="w-14 h-14 rounded-full shadow-soft"
-                style={{ backgroundColor: a.color, outline: accent === a.key ? '3px solid rgb(var(--accent))' : 'none', outlineOffset: 3 }} />
-              <span className="text-sm text-content-soft font-semibold">{a.label}</span>
-            </button>
-          ))}
-        </div>
-      </Field>
     </div>
   );
 }
@@ -324,19 +287,17 @@ interface PhotoItem {
 }
 
 function PhotosTab({
-  get,
-  update,
   toast,
   confirm,
 }: {
-  get: GetFn;
-  update: UpdateFn;
   toast: (m: string, k?: any) => void;
   confirm: any;
 }) {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [busy, setBusy] = useState(false);
-  const homeBg = get<string>('display.homeBackground', '');
+  const { settings, save } = useSettings();
+  const appearance = readAppearance(settings);
+  const homeBg = appearance.background.kind === 'photo' ? appearance.background.photos[0] || '' : '';
 
   const load = async () => {
     try {
@@ -386,7 +347,11 @@ function PhotosTab({
     if (!okc) return;
     try {
       await api.del(`/photos/${encodeURIComponent(p.name)}`);
-      if (homeBg === p.url) await update({ 'display.homeBackground': '' });
+      if (appearance.background.photos.includes(p.url)) {
+        const photos = appearance.background.photos.filter(url => url !== p.url);
+        await save({ 'display.homeBackground': '', 'display.appearance': { ...appearance,
+          background: { ...appearance.background, photos, kind: photos.length ? appearance.background.kind : 'none' } } });
+      }
       toast('Deleted', 'success');
       load();
     } catch {
@@ -394,7 +359,11 @@ function PhotosTab({
     }
   };
 
-  const setBackground = (url: string) => update({ 'display.homeBackground': url });
+  const setBackground = async (url: string) => {
+    try { await save({ 'display.homeBackground': url, 'display.appearance': { ...appearance,
+      background: { ...appearance.background, kind: url ? 'photo' : 'none', scope: 'home', photos: url ? [url] : [] } } }); }
+    catch { toast('Could not save the background. Please try again.', 'error'); }
+  };
 
   return (
     <div className="space-y-5">

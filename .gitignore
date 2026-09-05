@@ -39,5 +39,6 @@ Thumbs.db
 *.swp
 
 # User photos (personal)
+data/photos/
 client/public/photos/*
 !client/public/photos/.gitkeep
