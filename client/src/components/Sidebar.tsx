@@ -10,6 +10,8 @@ import {
   StickyNote,
   Heart,
   Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
@@ -22,8 +24,11 @@ interface NavEntry {
 }
 
 export function Sidebar() {
-  const { get } = useSettings();
+  const { get, update } = useSettings();
   const personalEnabled = get<boolean>('personal.enabled', true);
+  const collapsed = get<boolean>('display.sidebarCollapsed', false);
+
+  const toggle = () => update({ 'display.sidebarCollapsed': !collapsed });
 
   const entries: NavEntry[] = [
     { to: '/', label: get<string>('nav.homeLabel', 'Home'), icon: Home },
@@ -38,11 +43,20 @@ export function Sidebar() {
   ];
 
   return (
-    <nav className="w-28 xl:w-32 shrink-0 h-full bg-surface-card border-r border-line
-                    flex flex-col items-center py-4 gap-2 kiosk-nosel">
-      <div className="mb-2 text-accent">
-        <Heart size={30} className="mx-auto" fill="currentColor" />
-      </div>
+    <nav
+      className={`${
+        collapsed ? 'w-20' : 'w-28 xl:w-32'
+      } shrink-0 h-full bg-surface-card border-r border-line
+         flex flex-col items-center py-4 gap-2 kiosk-nosel transition-[width] duration-200`}
+    >
+      <button
+        onClick={toggle}
+        aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
+        title={collapsed ? 'Expand menu' : 'Collapse menu'}
+        className="mb-2 p-2 rounded-xl text-accent hover:bg-accent-soft/60 active:scale-95 transition"
+      >
+        {collapsed ? <PanelLeftOpen size={28} /> : <PanelLeftClose size={28} />}
+      </button>
       <div className="flex-1 flex flex-col gap-1.5 w-full px-2 overflow-y-auto no-scrollbar">
         {entries
           .filter((e) => e.show !== false)
@@ -51,23 +65,29 @@ export function Sidebar() {
               key={e.to}
               to={e.to}
               end={e.to === '/'}
+              title={collapsed ? e.label : undefined}
               className={({ isActive }) =>
-                `nav-item ${isActive ? 'nav-item-active' : 'hover:bg-accent-soft/60'}`
+                `nav-item ${collapsed ? '!py-3' : ''} ${
+                  isActive ? 'nav-item-active' : 'hover:bg-accent-soft/60'
+                }`
               }
             >
               <e.icon size={30} strokeWidth={2.1} />
-              <span className="text-xs xl:text-sm font-bold">{e.label}</span>
+              {!collapsed && <span className="text-xs xl:text-sm font-bold">{e.label}</span>}
             </NavLink>
           ))}
       </div>
       <NavLink
         to="/settings"
+        title={collapsed ? 'Settings' : undefined}
         className={({ isActive }) =>
-          `nav-item w-[calc(100%-1rem)] ${isActive ? 'nav-item-active' : 'hover:bg-accent-soft/60'}`
+          `nav-item w-[calc(100%-1rem)] ${collapsed ? '!py-3' : ''} ${
+            isActive ? 'nav-item-active' : 'hover:bg-accent-soft/60'
+          }`
         }
       >
         <Settings size={28} />
-        <span className="text-xs font-bold">Settings</span>
+        {!collapsed && <span className="text-xs font-bold">Settings</span>}
       </NavLink>
     </nav>
   );

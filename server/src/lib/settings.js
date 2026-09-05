@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS = {
   'display.dateFormat': 'EEEE, MMMM d', // date-fns format
   'display.screensaverMinutes': 10, // 0 disables
   'display.screensaverType': 'clock', // clock | photos
+  'display.homeBackground': '', // '' = none, else a /photos/<file> url
+  'display.sidebarCollapsed': false, // icon-only sidebar when true
   // Screen schedule (informational for the app; enforced by OS script)
   'display.screenWake': '07:00',
   'display.screenSleep': '23:30',

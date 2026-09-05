@@ -54,9 +54,13 @@ export default function HomePage() {
   const { data } = useResource<DashboardData>('/dashboard', []);
   const personalEnabled = get<boolean>('personal.enabled', true);
   const household = get<string>('general.householdName', 'Our Home');
+  const homeBg = get<string>('display.homeBackground', '');
   const [photoMode, setPhotoMode] = useState(false);
   const members = data?.familyMembers ?? [];
   const memberById = (id?: number | null) => members.find((m) => m.id === id) || null;
+  // Safe derivations so an old/partial dashboard payload can never crash the page.
+  const choresToday = data?.choresToday ?? [];
+  const choresRemaining = data?.choresRemaining ?? 0;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -66,7 +70,20 @@ export default function HomePage() {
   })();
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto">
+    <div className="relative min-h-full">
+      {homeBg ? (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${homeBg})` }}
+            aria-hidden
+          />
+          {/* Readability scrim so cards and text stay legible over any photo. */}
+          <div className="absolute inset-0 bg-surface/60 backdrop-blur-[2px]" aria-hidden />
+        </>
+      ) : null}
+
+      <div className="relative p-6 max-w-[1600px] mx-auto">
       <header className="mb-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -171,9 +188,9 @@ export default function HomePage() {
           </SectionCard>
 
           <SectionCard title="Chores" icon={Sparkles} to="/chores">
-            {data?.choresToday?.length ? (
+            {choresToday.length ? (
               <ul className="space-y-2">
-                {data.choresToday.slice(0, 6).map((c) => {
+                {choresToday.slice(0, 6).map((c) => {
                   const m = memberById(c.member_id);
                   return (
                     <li key={c.id} className="flex items-center gap-3">
@@ -198,9 +215,9 @@ export default function HomePage() {
             ) : (
               <p className="text-content-faint">No chores today. 🌱</p>
             )}
-            {data && data.choresToday.length > 0 && (
+            {choresToday.length > 0 && (
               <p className="text-sm text-content-faint mt-3">
-                {data.choresRemaining} left today
+                {choresRemaining} left today
               </p>
             )}
           </SectionCard>
@@ -228,10 +245,10 @@ export default function HomePage() {
           </SectionCard>
 
           <SectionCard title="Groceries" icon={ShoppingCart} to="/lists">
-            {data ? (
+            {data && data.groceryLists != null ? (
               <p className="text-lg text-content">
-                <span className="font-bold text-2xl text-accent-ink">{data.groceryOpen}</span>{' '}
-                item{data.groceryOpen === 1 ? '' : 's'} to buy
+                <span className="font-bold text-2xl text-accent-ink">{data.groceryOpen ?? 0}</span>{' '}
+                item{(data.groceryOpen ?? 0) === 1 ? '' : 's'} to buy
                 <span className="text-content-faint text-base">
                   {' '}
                   · {data.groceryLists} list{data.groceryLists === 1 ? '' : 's'}
@@ -300,6 +317,7 @@ export default function HomePage() {
             </SectionCard>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

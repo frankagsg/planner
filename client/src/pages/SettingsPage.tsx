@@ -21,6 +21,8 @@ import {
   ArrowUp,
   ArrowDown,
   Pencil,
+  Images,
+  Star,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useSettings } from '../context/SettingsContext';
@@ -54,6 +56,7 @@ type Tab =
   | 'calendars'
   | 'weather'
   | 'personal'
+  | 'photos'
   | 'google'
   | 'backups'
   | 'system';
@@ -72,6 +75,7 @@ export default function SettingsPage() {
     { key: 'calendars', label: 'Calendars', icon: Rss },
     { key: 'weather', label: 'Weather', icon: CloudSun },
     { key: 'personal', label: 'Personal', icon: Heart },
+    { key: 'photos', label: 'Photos', icon: Images },
     { key: 'google', label: 'Google', icon: Cloud },
     { key: 'backups', label: 'Backups', icon: Database },
     { key: 'system', label: 'System', icon: Cpu },
@@ -105,6 +109,7 @@ export default function SettingsPage() {
           {tab === 'calendars' && <CalendarsTab toast={toast} confirm={confirm} />}
           {tab === 'weather' && <WeatherTab get={get} update={update} toast={toast} />}
           {tab === 'personal' && <PersonalTab get={get} update={update} />}
+          {tab === 'photos' && <PhotosTab get={get} update={update} toast={toast} confirm={confirm} />}
           {tab === 'google' && <GoogleTab toast={toast} />}
           {tab === 'backups' && <BackupsTab toast={toast} confirm={confirm} />}
           {tab === 'system' && <SystemTab toast={toast} confirm={confirm} />}
@@ -308,6 +313,173 @@ function PersonalTab({ get, update }: { get: GetFn; update: UpdateFn }) {
         Turning this off hides the “Us” tab and its dashboard card entirely. Content is kept and
         returns when you re-enable it. Edit names, message, photos and dates from the Us tab.
       </p>
+    </div>
+  );
+}
+
+interface PhotoItem {
+  name: string;
+  url: string;
+  size: number;
+}
+
+function PhotosTab({
+  get,
+  update,
+  toast,
+  confirm,
+}: {
+  get: GetFn;
+  update: UpdateFn;
+  toast: (m: string, k?: any) => void;
+  confirm: any;
+}) {
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [busy, setBusy] = useState(false);
+  const homeBg = get<string>('display.homeBackground', '');
+
+  const load = async () => {
+    try {
+      setPhotos(await api.get<PhotoItem[]>('/photos'));
+    } catch {
+      toast('Could not load photos', 'error');
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const readAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setBusy(true);
+    let ok = 0;
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) continue;
+      try {
+        const dataUrl = await readAsDataUrl(file);
+        await api.post('/photos', { dataUrl, name: file.name });
+        ok++;
+      } catch (e: any) {
+        toast(e?.message || `Could not upload ${file.name}`, 'error');
+      }
+    }
+    setBusy(false);
+    if (ok) toast(`Uploaded ${ok} photo${ok === 1 ? '' : 's'}`, 'success');
+    load();
+  };
+
+  const remove = async (p: PhotoItem) => {
+    const okc = await confirm({
+      title: 'Delete photo?',
+      message: 'This removes it from the planner permanently.',
+      danger: true,
+      confirmLabel: 'Delete',
+    });
+    if (!okc) return;
+    try {
+      await api.del(`/photos/${encodeURIComponent(p.name)}`);
+      if (homeBg === p.url) await update({ 'display.homeBackground': '' });
+      toast('Deleted', 'success');
+      load();
+    } catch {
+      toast('Could not delete', 'error');
+    }
+  };
+
+  const setBackground = (url: string) => update({ 'display.homeBackground': url });
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-xl font-display font-bold text-content mb-1">Photos</h3>
+        <p className="text-content-faint">
+          Upload photos for the screensaver, Photo Mode, and the home background. They’re stored
+          on this device — nothing leaves your home.
+        </p>
+      </div>
+
+      <label className={`btn-primary inline-flex cursor-pointer ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
+        <Upload size={20} /> {busy ? 'Uploading…' : 'Upload photos'}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          data-vkeyboard="off"
+          onChange={(e) => {
+            onFiles(e.target.files);
+            e.currentTarget.value = '';
+          }}
+        />
+      </label>
+
+      {/* Home background chooser */}
+      <div className="card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Images size={20} className="text-accent" />
+          <h4 className="font-display font-bold text-content">Home screen background</h4>
+        </div>
+        <div className="flex gap-3 flex-wrap">
+          <button
+            onClick={() => setBackground('')}
+            className={`w-28 h-20 rounded-xl border-2 flex items-center justify-center text-sm font-semibold ${
+              homeBg === '' ? 'border-accent text-accent bg-accent-soft' : 'border-line text-content-faint'
+            }`}
+          >
+            None
+          </button>
+          {photos.map((p) => (
+            <button
+              key={p.name}
+              onClick={() => setBackground(p.url)}
+              className={`relative w-28 h-20 rounded-xl overflow-hidden border-2 ${
+                homeBg === p.url ? 'border-accent' : 'border-transparent'
+              }`}
+              title="Use as home background"
+            >
+              <img src={p.url} alt="" className="w-full h-full object-cover" />
+              {homeBg === p.url && (
+                <span className="absolute top-1 right-1 bg-accent text-white rounded-full p-1">
+                  <Star size={14} fill="currentColor" />
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Library grid */}
+      <div>
+        <h4 className="font-display font-bold text-content mb-2">
+          Library {photos.length > 0 && <span className="text-content-faint">({photos.length})</span>}
+        </h4>
+        {photos.length === 0 ? (
+          <p className="text-content-faint">No photos yet. Upload some above.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {photos.map((p) => (
+              <div key={p.name} className="relative group rounded-xl overflow-hidden border border-line">
+                <img src={p.url} alt={p.name} className="w-full h-32 object-cover" />
+                <button
+                  onClick={() => remove(p)}
+                  className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-2 active:scale-95"
+                  aria-label={`Delete ${p.name}`}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -19,7 +19,8 @@ const ConfigSchema = z.object({
   photo_interval: z.coerce.number().int().min(2).max(120).optional(),
 });
 
-const photosDir = path.resolve(config.repoRoot, 'client', 'public', 'photos');
+// Uploaded photos live in the persistent store (config.photosDir), served at /photos.
+const photosDir = config.photosDir;
 const IMAGE_RE = /\.(jpe?g|png|webp|gif)$/i;
 
 function listPhotos() {

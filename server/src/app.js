@@ -13,6 +13,7 @@ import chores from './routes/chores.js';
 import meals from './routes/meals.js';
 import shopping from './routes/shopping.js';
 import subscriptions from './routes/subscriptions.js';
+import photos from './routes/photos.js';
 import notes from './routes/notes.js';
 import school from './routes/school.js';
 import countdowns from './routes/countdowns.js';
@@ -40,11 +41,17 @@ export function createApp() {
     })
   );
 
-  // JSON for most routes; backups/import handles its own raw stream.
+  // JSON for most routes; backups/import streams raw, and /api/photos accepts
+  // larger base64 bodies via its own parser.
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/backups/import')) return next();
+    if (req.path.startsWith('/api/photos')) return next();
     return express.json({ limit: '2mb' })(req, res, next);
   });
+
+  // Serve uploaded photos from the persistent store (survives frontend rebuilds).
+  fs.mkdirSync(config.photosDir, { recursive: true });
+  app.use('/photos', express.static(config.photosDir));
 
   // Health check.
   app.get('/api/health', (_req, res) => {
@@ -59,6 +66,7 @@ export function createApp() {
   app.use('/api/meals', meals);
   app.use('/api/shopping', shopping);
   app.use('/api/subscriptions', subscriptions);
+  app.use('/api/photos', photos);
   app.use('/api/notes', notes);
   app.use('/api/school', school);
   app.use('/api/countdowns', countdowns);

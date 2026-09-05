@@ -27,6 +27,8 @@ export const config = {
   isProd: (process.env.NODE_ENV || 'production') === 'production',
 
   databasePath: resolvePath(process.env.DATABASE_PATH, './database/planner.db'),
+  // Uploaded photos live outside client/dist so they survive frontend rebuilds.
+  photosDir: resolvePath(process.env.PHOTOS_DIR, './data/photos'),
   backupDir: resolvePath(process.env.BACKUP_DIR, './backups'),
   backupRetention: parseInt(process.env.BACKUP_RETENTION || '7', 10),
   backupIntervalHours: parseInt(process.env.BACKUP_INTERVAL_HOURS || '24', 10),
