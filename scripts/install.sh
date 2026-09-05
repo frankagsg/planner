@@ -177,7 +177,7 @@ cat > "$KIOSK_LOOP" <<LOOP
 # Wait for the backend, then keep Chromium kiosk alive (relaunch on crash).
 until curl -sf http://localhost:4000/api/health >/dev/null; do sleep 1; done
 while true; do
-  "$APP_DIR/scripts/kiosk.sh"
+  bash "$APP_DIR/scripts/kiosk.sh"
   sleep 3
 done
 LOOP
