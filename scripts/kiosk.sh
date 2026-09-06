@@ -44,6 +44,7 @@ exec "$CHROME_BIN" \
   --kiosk \
   --app="$URL" \
   --user-data-dir="$PROFILE_DIR" \
+  --password-store=basic \
   --noerrdialogs \
   --disable-infobars \
   --disable-session-crashed-bubble \
