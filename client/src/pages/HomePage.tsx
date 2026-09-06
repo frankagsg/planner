@@ -24,6 +24,7 @@ import { PhotoMode } from '../components/PhotoMode';
 import { MemberAvatar } from '../components/MemberBadge';
 import { relative } from '../lib/dates';
 import { useState } from 'react';
+import { HomeLayout } from '../components/HomeLayout';
 
 function SectionCard({
   title,
@@ -99,21 +100,11 @@ export default function HomePage() {
 
       {photoMode && <PhotoMode onExit={() => setPhotoMode(false)} />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left column: clock + weather */}
-        <div className="space-y-5">
-          <ClockWidget />
-          <ErrorBoundary area="Weather">
-            <WeatherWidget />
-          </ErrorBoundary>
-          {data?.countdowns && data.countdowns.length > 0 && (
-            <CountdownWidget items={data.countdowns} />
-          )}
-        </div>
-
-        {/* Middle column: today's events + tasks */}
-        <div className="space-y-5">
-          <SectionCard title="Today" icon={CalendarDays} to="/calendar">
+      <HomeLayout widgets={{
+        clock: (<ClockWidget />),
+        weather: (get<boolean>('weather.enabled', true) ? <ErrorBoundary area="Weather"><WeatherWidget /></ErrorBoundary> : null),
+        countdowns: (data?.countdowns?.length ? <CountdownWidget items={data.countdowns} /> : null),
+        today: (<SectionCard title="Today" icon={CalendarDays} to="/calendar">
             {data?.todayEvents?.length ? (
               <ul className="space-y-2">
                 {data.todayEvents.slice(0, 6).map((e) => (
@@ -134,9 +125,8 @@ export default function HomePage() {
             ) : (
               <p className="text-content-faint">Nothing scheduled today.</p>
             )}
-          </SectionCard>
-
-          <SectionCard title="Tasks" icon={CheckSquare} to="/tasks">
+          </SectionCard>),
+        tasks: (<SectionCard title="Tasks" icon={CheckSquare} to="/tasks">
             {data?.tasksToday?.length ? (
               <ul className="space-y-2">
                 {data.tasksToday.slice(0, 6).map((t) => {
@@ -173,9 +163,8 @@ export default function HomePage() {
                 {data.tasksOpen} open task{data.tasksOpen === 1 ? '' : 's'} total
               </p>
             )}
-          </SectionCard>
-
-          <SectionCard title="Chores" icon={Sparkles} to="/chores">
+          </SectionCard>),
+        chores: (<SectionCard title="Chores" icon={Sparkles} to="/chores">
             {choresToday.length ? (
               <ul className="space-y-2">
                 {choresToday.slice(0, 6).map((c) => {
@@ -208,12 +197,8 @@ export default function HomePage() {
                 {choresRemaining} left today
               </p>
             )}
-          </SectionCard>
-        </div>
-
-        {/* Right column: meals + lists + school + personal + notes */}
-        <div className="space-y-5">
-          <SectionCard title="Today's meals" icon={UtensilsCrossed} to="/meals">
+          </SectionCard>),
+        meals: (<SectionCard title="Today's meals" icon={UtensilsCrossed} to="/meals">
             {data?.mealsToday?.length ? (
               <ul className="space-y-2">
                 {data.mealsToday.map((mn) => (
@@ -230,9 +215,8 @@ export default function HomePage() {
             ) : (
               <p className="text-content-faint">No meals planned today.</p>
             )}
-          </SectionCard>
-
-          <SectionCard title="Groceries" icon={ShoppingCart} to="/lists">
+          </SectionCard>),
+        groceries: (<SectionCard title="Groceries" icon={ShoppingCart} to="/lists">
             {data && data.groceryLists != null ? (
               <p className="text-lg text-content">
                 <span className="font-bold text-2xl text-accent-ink">{data.groceryOpen ?? 0}</span>{' '}
@@ -245,9 +229,8 @@ export default function HomePage() {
             ) : (
               <p className="text-content-faint">No lists yet.</p>
             )}
-          </SectionCard>
-
-          <SectionCard title="School" icon={GraduationCap} to="/school">
+          </SectionCard>),
+        school: (<SectionCard title="School" icon={GraduationCap} to="/school">
             {data?.schoolSummary ? (
               <div className="space-y-2">
                 <p className="text-lg text-content">
@@ -272,10 +255,8 @@ export default function HomePage() {
             ) : (
               <p className="text-content-faint">No school items yet.</p>
             )}
-          </SectionCard>
-
-          {personalEnabled && data?.personal?.enabled ? (
-            <SectionCard title="Us" icon={Heart} to="/personal">
+          </SectionCard>),
+        personal: (personalEnabled && data?.personal?.enabled ? (<SectionCard title="Us" icon={Heart} to="/personal">
               {data.personal.message && (
                 <p className="text-lg text-content italic">"{data.personal.message}"</p>
               )}
@@ -285,11 +266,8 @@ export default function HomePage() {
                   {data.personal.next_date_note ? ` · ${data.personal.next_date_note}` : ''}
                 </p>
               )}
-            </SectionCard>
-          ) : null}
-
-          {data?.pinnedNotes && data.pinnedNotes.length > 0 && (
-            <SectionCard title="Pinned notes" icon={CheckSquare} to="/notes">
+            </SectionCard>) : null),
+        notes: (data?.pinnedNotes?.length ? (<SectionCard title="Pinned notes" icon={CheckSquare} to="/notes">
               <ul className="space-y-2">
                 {data.pinnedNotes.map((n) => (
                   <li
@@ -302,10 +280,8 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-            </SectionCard>
-          )}
-        </div>
-      </div>
+            </SectionCard>) : null)
+      }} />
       </div>
     </div>
   );
