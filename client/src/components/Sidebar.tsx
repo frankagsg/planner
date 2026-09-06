@@ -44,7 +44,7 @@ export function Sidebar() {
 
   return (
     <nav
-      className={`${
+      className={`planner-sidebar relative ${
         collapsed ? 'w-20' : 'w-28 xl:w-32'
       } shrink-0 h-full bg-surface-card border-r border-line
          flex flex-col items-center py-4 gap-2 kiosk-nosel transition-[width] duration-200`}
@@ -65,7 +65,8 @@ export function Sidebar() {
               key={e.to}
               to={e.to}
               end={e.to === '/'}
-              title={collapsed ? e.label : undefined}
+              title={e.label}
+              aria-label={e.label}
               className={({ isActive }) =>
                 `nav-item ${collapsed ? '!py-3' : ''} ${
                   isActive ? 'nav-item-active' : 'hover:bg-accent-soft/60'
@@ -79,7 +80,8 @@ export function Sidebar() {
       </div>
       <NavLink
         to="/settings"
-        title={collapsed ? 'Settings' : undefined}
+        title="Settings"
+        aria-label="Settings"
         className={({ isActive }) =>
           `nav-item w-[calc(100%-1rem)] ${collapsed ? '!py-3' : ''} ${
             isActive ? 'nav-item-active' : 'hover:bg-accent-soft/60'

@@ -19,9 +19,12 @@ import SchoolPage from './pages/SchoolPage';
 import NotesPage from './pages/NotesPage';
 import PersonalPage from './pages/PersonalPage';
 import SettingsPage from './pages/SettingsPage';
+import { PlannerBackground } from './components/appearance/PlannerBackground';
+import { readAppearance } from './lib/appearance';
 
 export default function App() {
-  const { get, ready } = useSettings();
+  const { get, ready, settings } = useSettings();
+  const appearance = readAppearance(settings);
   const firstRunComplete = get<boolean>('general.firstRunComplete', false);
   const [wizardDone, setWizardDone] = useState(false);
 
@@ -45,7 +48,8 @@ export default function App() {
   const showSaver = idle && !dismissed;
 
   return (
-    <div className="h-full flex bg-surface overflow-hidden">
+    <div className="h-full flex bg-surface overflow-hidden relative isolate">
+      {(appearance.background.scope === 'all' || location.pathname === '/') && <PlannerBackground appearance={appearance} />}
       <Sidebar />
       <main className="flex-1 h-full overflow-y-auto no-scrollbar relative">
         <div className="h-full min-h-full pb-[var(--vk-pad,0)]">

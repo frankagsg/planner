@@ -54,7 +54,6 @@ export default function HomePage() {
   const { data } = useResource<DashboardData>('/dashboard', []);
   const personalEnabled = get<boolean>('personal.enabled', true);
   const household = get<string>('general.householdName', 'Our Home');
-  const homeBg = get<string>('display.homeBackground', '');
   const [photoMode, setPhotoMode] = useState(false);
   const members = data?.familyMembers ?? [];
   const memberById = (id?: number | null) => members.find((m) => m.id === id) || null;
@@ -70,18 +69,7 @@ export default function HomePage() {
   })();
 
   return (
-    <div className="relative min-h-full">
-      {homeBg ? (
-        <>
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${homeBg})` }}
-            aria-hidden
-          />
-          {/* Readability scrim so cards and text stay legible over any photo. */}
-          <div className="absolute inset-0 bg-surface/60 backdrop-blur-[2px]" aria-hidden />
-        </>
-      ) : null}
+    <div className="relative min-h-full planner-home">
 
       <div className="relative p-6 max-w-[1600px] mx-auto">
       <header className="mb-6">
@@ -306,7 +294,7 @@ export default function HomePage() {
                 {data.pinnedNotes.map((n) => (
                   <li
                     key={n.id}
-                    className="rounded-xl p-3 text-content"
+                    className="rounded-xl p-3 text-stone-800"
                     style={{ backgroundColor: n.color }}
                   >
                     <div className="font-bold line-clamp-1">{n.title || 'Note'}</div>

@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
+import { once } from 'node:events';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -262,7 +263,9 @@ try {
   fail++;
   console.error('  \u2717 exception:', err.message);
 } finally {
+  const stopped = server.exitCode === null ? once(server, 'exit') : Promise.resolve();
   server.kill('SIGTERM');
+  await stopped; // Windows keeps the SQLite file locked until the process exits.
   // Remove temp verify DB.
   for (const suffix of ['', '-wal', '-shm']) {
     const f = path.join(repoRoot, 'database', 'verify.db' + suffix);

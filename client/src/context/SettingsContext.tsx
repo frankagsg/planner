@@ -6,14 +6,16 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { api, readCache } from '../lib/api';
+import { api, readCache, writeCache } from '../lib/api';
 import type { Settings } from '../types';
+import { appearanceTokens, isDarkAppearance, readAppearance } from '../lib/appearance';
 
 interface SettingsCtx {
   settings: Settings;
   ready: boolean;
   get: <T = unknown>(key: string, fallback?: T) => T;
   update: (patch: Settings) => Promise<void>;
+  save: (patch: Settings) => Promise<void>;
   reload: () => Promise<void>;
 }
 
@@ -33,13 +35,12 @@ const DEFAULTS: Settings = {
 
 function applyTheme(settings: Settings) {
   const html = document.documentElement;
-  const theme = (settings['display.theme'] as string) || 'auto';
-  const accent = (settings['display.accent'] as string) || 'blush';
-  html.setAttribute('data-accent', accent);
-
+  const appearance = readAppearance(settings);
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const dark = theme === 'dark' || (theme === 'auto' && prefersDark);
+  const dark = isDarkAppearance(appearance, prefersDark);
   html.classList.toggle('dark', dark);
+  html.style.colorScheme = dark ? 'dark' : 'light';
+  for (const [key, value] of Object.entries(appearanceTokens(appearance, dark))) html.style.setProperty(key, value);
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -61,6 +62,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     reload();
+    const timer = window.setInterval(reload, 30_000);
+    return () => window.clearInterval(timer);
   }, [reload]);
 
   useEffect(() => {
@@ -72,8 +75,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => applyTheme(settings);
     mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    const timer = window.setInterval(handler, 30_000);
+    return () => { mq.removeEventListener('change', handler); window.clearInterval(timer); };
   }, [settings]);
+
+  // Appearance saves are acknowledged by the server before changing the app.
+  // Preserve the draft on failure and cache confirmed settings for offline use.
+  const save = useCallback(async (patch: Settings) => {
+    const next = await api.put<Settings>('/settings', patch);
+    writeCache('/api/settings', next);
+    setSettings(next);
+  }, []);
 
   const update = useCallback(async (patch: Settings) => {
     // Optimistic local apply for instant UI feedback.
@@ -95,7 +107,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ settings, ready, get, update, reload }}>
+    <Ctx.Provider value={{ settings, ready, get, update, save, reload }}>
       {children}
     </Ctx.Provider>
   );

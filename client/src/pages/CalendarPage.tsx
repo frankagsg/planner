@@ -11,7 +11,9 @@ import { useSettings } from '../context/SettingsContext';
 import { useFeedback } from '../components/ui/Feedback';
 import { Modal } from '../components/ui/Modal';
 import { Field } from '../components/ui/Field';
-import type { EventItem, Category } from '../types';
+import type { EventItem, Category, CalendarSubscription } from '../types';
+import { calendarChoices, eventCalendarId } from '../lib/calendarChoices';
+import type { CalendarChoice, GoogleCalendarChoice } from '../lib/calendarChoices';
 import { toLocalInput, fromLocalInput } from '../lib/dates';
 import { useFamily, memberColor } from '../hooks/useFamily';
 import { MemberFilter, MemberSelect } from '../components/MemberBadge';
@@ -49,13 +51,29 @@ export default function CalendarPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [memberFilter, setMemberFilter] = useState<number | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
+  const [calendars, setCalendars] = useState<CalendarChoice[]>([]);
+  const [calendarFilter, setCalendarFilter] = useState(() => {
+    try { return localStorage.getItem('wp:calendar:selected') || 'all'; }
+    catch { return 'all'; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('wp:calendar:selected', calendarFilter); }
+    catch { /* Calendar switching still works when storage is unavailable. */ }
+  }, [calendarFilter]);
 
   const load = useCallback(async () => {
     try {
-      const [evs, cats] = await Promise.all([
+      const [evs, cats, subscriptions, google] = await Promise.all([
         api.get<EventItem[]>('/events', true),
         api.get<Category[]>('/categories', true),
+        api.get<CalendarSubscription[]>('/subscriptions').catch(() => []),
+        api.get<{ connected: boolean }>('/google/status').then(status => status.connected
+          ? api.get<GoogleCalendarChoice[]>('/google/calendars', true) : []).catch(() => []),
       ]);
+      const choices = calendarChoices(evs, subscriptions, google);
+      setCalendars(choices);
+      setCalendarFilter(current => current === 'all' || choices.some(c => c.id === current) ? current : 'all');
       setCategories(cats);
       setRawEvents(evs);
     } catch {
@@ -67,6 +85,7 @@ export default function CalendarPage() {
   // an explicit per-event color still wins. Filter by member when selected.
   const catColor = (id?: number | null) => categories.find((c) => c.id === id)?.color;
   const events: EventInput[] = rawEvents
+    .filter((e) => calendarFilter === 'all' || eventCalendarId(e) === calendarFilter)
     .filter((e) => memberFilter === null || e.member_id === memberFilter)
     .map((e) => ({
       id: String(e.id),
@@ -158,6 +177,23 @@ export default function CalendarPage() {
           <Plus size={22} /> New event
         </button>
       </div>
+
+      <section className="card p-3 mb-3" aria-label="Calendar selection">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h2 className="text-sm font-semibold text-content">Show calendar</h2>
+          <a className="text-sm text-content-soft underline" href="#/settings">Manage calendars</a>
+        </div>
+        <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto" role="group" aria-label="Show calendar">
+          {[{ id: 'all', name: 'All calendars' }, ...calendars].map((calendar: CalendarChoice) => (
+            <button key={calendar.id} type="button" aria-pressed={calendarFilter === calendar.id}
+              className={`${calendarFilter === calendar.id ? 'btn-primary' : 'btn-ghost'} !py-2 !px-3 min-h-[44px] max-w-full`}
+              onClick={() => setCalendarFilter(calendar.id)}>
+              {calendar.color && <span aria-hidden="true" className="w-3 h-3 rounded-full shrink-0 border border-current" style={{ backgroundColor: calendar.color }} />}
+              <span className="truncate">{calendar.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {members.length > 0 && (
         <div className="mb-3">
